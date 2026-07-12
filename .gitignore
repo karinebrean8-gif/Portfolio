@@ -1,0 +1,134 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# ============================================================================
+# ARCHITECTURE : ULTRA-FAANG PRINCIPAL MASTER SYSTEM CORE [.gitignore]
+# VERSION      : v12.4.0-PROD // ARCHITECT LEVEL (50+ YRS EXPERIENCE SPEC)
+# PARADIGM     : ZERO-LEAK INFRASTRUCTURE & SEAMLESS REPOSITORY PURGE
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. RUNTIME & SYSTEM DEPLOYMENT MEMORY SEGMENTS (NODE / EDGE ENGINE)
+# ----------------------------------------------------------------------------
+node_modules/
+/jspm_packages/
+/web_modules/
+.pnp/
+.pnp.js
+
+# ----------------------------------------------------------------------------
+# 2. NEXT.JS ENTERPRISE ENGINE STANDALONE & BUILD MATRIX
+# ----------------------------------------------------------------------------
+.next/
+out/
+/build/
+/dist/
+.serverless/
+.sst/
+
+# ----------------------------------------------------------------------------
+# 3. KERNEL CRYPTOGRAPHIC SECRETS & REVERSE-ENGINEERING SHIELD
+# ----------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.crt
+*.key
+*.pfx
+*.pkcs12
+*.secrets
+*.passwd
+.pockets/
+kubeconfig*
+.vault/
+
+# ----------------------------------------------------------------------------
+# 4. COMPILER HYDRATION & REPO PERFORMANCE CACHE MAPS
+# ----------------------------------------------------------------------------
+.turbo/
+.cache/
+.npm/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.prettiercache
+.parcel-cache/
+.swc/
+
+# ----------------------------------------------------------------------------
+# 5. DIAGNOSTIC INFRASTRUCTURE CORE & THREAD MEMORY DUMPS
+# ----------------------------------------------------------------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+*.pcap
+core.*
+*.dmp
+*.stackdump
+
+# ----------------------------------------------------------------------------
+# 6. CONTAINER ORCHESTRATION & CLOUD RUNTIME LEAKS (DOCKER / K8S)
+# ----------------------------------------------------------------------------
+.docker/
+docker-compose.override.yml
+*.tar.gz
+*.tar
+*~
+.kube/
+
+# ----------------------------------------------------------------------------
+# 7. SYSTEM INDEPENDENT RUNTIME LAYER DISK OVERHEADS (OS SPECIFIC)
+# ----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ----------------------------------------------------------------------------
+# 8. INTEGRATED DEVELOPMENT WORKSPACE INTERCEPTORS (VS CODE / JETBRAINS)
+# ----------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ============================================================================
+# END OF ARCHITECT MATRIX CONTROL NODE // TARGET REPOSITORY STABILIZED
+# ============================================================================

@@ -1,0 +1,210 @@
+{
+    "systemMetadata": {
+        "clusterOwner": "Shakib Mia",
+        "architectureVersion": "L10.9.42",
+        "targetEngine": "Docker Containerd K8s Mesh",
+        "lastUnifiedEpoch": 1783152000000
+    },
+    "ingressFeed": [
+        {
+            "providerRef": "COURSERA_NODE",
+            "course_title": "Virtualization, Docker, and Kubernetes for Data Engineering",
+            "vendor": "Duke University",
+            "timestamps": {
+                "given": "Jun 2026",
+                "deadLine": "Apr 2035"
+            },
+            "signature_hex": "3CCYPNBIEK26",
+            "tags": [
+                "Docker",
+                "Kubernetes",
+                "Virtualization",
+                "Data Engineering",
+                "PostgreSQL",
+                "MySQL"
+            ]
+        },
+        {
+            "providerRef": "GOOGLE_INTERNAL",
+            "job_ai_cert": "Accelerate Your Job Search with AI",
+            "authority_brand": "Google",
+            "date_matrix": {
+                "start": "Jun 2026",
+                "end": "Jun 2036"
+            },
+            "token_id": "8NSHZKDSCL16",
+            "competencies": [
+                "AI Workflows",
+                "Prompt Engineering",
+                "Google Leadership",
+                "Google Project Management"
+            ]
+        },
+        {
+            "providerRef": "AWS_CONSOLE",
+            "aws_track_name": "AWS Cloud Practitioner Essentials",
+            "signer": "Amazon Web Services",
+            "timeline_meta": {
+                "issued": "Jun 2026",
+                "expires": "Sep 2036"
+            },
+            "aws_credential_id": "HTPJ07B98G54",
+            "skills_associated": [
+                "AWS Cloud",
+                "Cloud Infrastructure",
+                "Systems Scale",
+                "Cloud Economics"
+            ]
+        },
+        {
+            "providerRef": "IBM_ACADEMY",
+            "assessment_name": "Full Stack Software Developer Assessment",
+            "org": "IBM",
+            "duration": {
+                "issued_at": "May 2026",
+                "validation_end": "Jun 2036"
+            },
+            "id_string": "VH0MLV842PP4",
+            "skills_list": [
+                "Assessment",
+                "Architecture Validation",
+                "Enterprise Design Templates",
+                "LeetCode 130+ Solving"
+            ]
+        },
+        {
+            "providerRef": "IBM_ACADEMY",
+            "assessment_name": "Introduction to Software Engineering",
+            "org": "IBM",
+            "duration": {
+                "issued_at": "Jun 2026",
+                "validation_end": "Sep 2036"
+            },
+            "id_string": "HZ28FS7TZXR1",
+            "skills_list": [
+                "SDLC Paradigms",
+                "Agile Core Engineering",
+                "Design Patterns",
+                "Clean Code Architecture"
+            ]
+        },
+        {
+            "providerRef": "MICROSOFT_LEARN",
+            "capstone_project_title": "Full-Stack Developer Capstone Project",
+            "owner": "Microsoft",
+            "dates": {
+                "creation": "Jun 2026",
+                "expiration": "Jun 2036"
+            },
+            "ms_uuid": "8BOCR2L2NPME",
+            "stack_capabilities": [
+                "Microsoft Next.js",
+                "System Integration",
+                "Production Architecture",
+                "Prisma",
+                "React.js"
+            ]
+        },
+        {
+            "providerRef": "IBM_ACADEMY",
+            "assessment_name": "Getting Started with Git and GitHub",
+            "org": "IBM",
+            "duration": {
+                "issued_at": "Jun 2026",
+                "validation_end": "Jul 2036"
+            },
+            "id_string": "SGT8CVAL48OQ",
+            "skills_list": [
+                "Git",
+                "GitHub Actions",
+                "VCS Automations"
+            ]
+        },
+        {
+            "providerRef": "META_BLUEPRINT",
+            "api_module_name": "APIs",
+            "brand_owner": "Meta",
+            "lifecycle": {
+                "origin": "Jun 2026",
+                "terminal": "Aug 2036"
+            },
+            "meta_id": "EJH8P9B7D9PG",
+            "tech_array": [
+                "RESTful APIs",
+                "API Design Engine",
+                "Secure Ingress Routing"
+            ]
+        },
+        {
+            "providerRef": "COURSERA_NODE",
+            "course_title": "Microservice Architectures",
+            "vendor": "Vanderbilt University",
+            "timestamps": {
+                "given": "Jun 2026",
+                "deadLine": "Oct 2036"
+            },
+            "signature_hex": "ENB1OVY7NEOM",
+            "tags": [
+                "Distributed Clusters",
+                "Microservices Topology",
+                "Event Streams",
+                "Docker",
+                "Kubernetes"
+            ]
+        },
+        {
+            "providerRef": "META_BLUEPRINT",
+            "api_module_name": "Django Web Framework",
+            "brand_owner": "Meta",
+            "lifecycle": {
+                "origin": "Jun 2026",
+                "terminal": "Permanent"
+            },
+            "meta_id": "MT4OBCGZSXC3",
+            "tech_array": [
+                "Python Engine",
+                "Django MVC",
+                "Prisma",
+                "PostgreSQL",
+                "MySQL"
+            ]
+        },
+        {
+            "providerRef": "IBM_ACADEMY",
+            "assessment_name": "Developing Back-End Apps with Node.js and Express",
+            "org": "IBM",
+            "duration": {
+                "issued_at": "Jun 2026",
+                "validation_end": "Jan 2036"
+            },
+            "id_string": "UNNXMXRIIO69",
+            "skills_list": [
+                "Node.js",
+                "Express.js Engine",
+                "Asynchronous Pipelines",
+                "PostgreSQL",
+                "MySQL",
+                "Redux.js"
+            ]
+        },
+        {
+            "providerRef": "IBM_ACADEMY",
+            "assessment_name": "Developing Front-End Apps with React",
+            "org": "IBM",
+            "duration": {
+                "issued_at": "Jun 2026",
+                "validation_end": "Jun 2026"
+            },
+            "id_string": "CB7P5PSKFESH",
+            "skills_list": [
+                "React.js",
+                "Redux.js",
+                "google project management",
+                "google leadership",
+                "ui",
+                "ux design",
+                "Prisma"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,195 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ultragod-fullstack-core
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ultragod-fullstack
+    app.kubernetes.io/instance: production-v1
+    app.kubernetes.io/component: core-backend
+    app.kubernetes.io/part-of: ultrafaang-portfolio
+    app.kubernetes.io/managed-by: gitops-argocd
+    tier: backend
+spec:
+  # L15 Touch: HPA (Horizontal Pod Autoscaler) এটি হ্যান্ডেল করবে,
+  # তবে রেপ্লিকার মিনিমাম বেসলাইন এখানে ডিফাইন করা।
+  replicas: 5
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25% # আপডেটের সময় ২৫% নতুন পড আগে তৈরি হবে
+      maxUnavailable: 0% # ডাউনটাইম জিরো রাখার জন্য কোনো পড ডাউন হবে না
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ultragod-fullstack
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ultragod-fullstack
+        tier: backend
+      annotations:
+        # Prometheus Metrics Scraping
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        # Linkerd / Istio Service Mesh Config
+        sidecar.istio.io/inject: "true"
+    spec:
+      # --- HIGH AVAILABILITY & SCHEDULING ---
+      # L15 Strategy: একই নোড ক্র্যাশ করলে যেন সব পড একসাথে ডাউন না হয় (Anti-Affinity)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              topologyKey: "kubernetes.io/hostname"
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - ultragod-fullstack
+
+      # গ্রেসফুল শাটডাউনের জন্য পর্যাপ্ত সময় (Connection Draining)
+      terminationGracePeriodSeconds: 60
+
+      # --- SECURITY CONTEXT (Zero-Trust) ---
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      # --- INIT CONTAINERS (Clean Architecture Prerequisite) ---
+      # মেইন অ্যাপ রান করার আগে ডাটাবেস মাইগ্রেশন বা রেডি চেক করার জন্য
+      initContainers:
+        - name: wait-for-db-and-cache
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z -w 2 rds-aurora-cluster 5432 && nc -z -w 2 redis-cluster 6379; do echo waiting for infrastructure; sleep 2; done;",
+            ]
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      # --- MAIN APPLICATION CONTAINER ---
+      containers:
+        - name: fullstack-api-service
+          image: ultrafaang-registry.io/godmode/portfolio-api:v2.4.1@sha256:dca71234567890abcdef
+          imagePullPolicy: IfNotPresent
+
+          # Production Ports
+          ports:
+            - name: http-api
+              containerPort: 8080
+              protocol: TCP
+            - name: grpc-internal
+              containerPort: 50051
+              protocol: TCP
+
+          # --- RESOURCE MANAGEMENT (Guaranteed QoS Class) ---
+          # L15 rule: Production-এ Requests এবং Limits সবসময় সমান হতে হবে ওমলেট হওয়া থামাডর জন্য (OOMKilled)
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+
+          # --- HEALTH CHECKS & PROBES (Self-Healing) ---
+          # অ্যাপ রেডি কি না ট্রাফিক নেওয়ার জন্য
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          # অ্যাপ ডেডলক খেয়েছে কি না (ক্র্যাশ লুপ এড়াতে টাইমআউট বড় রাখা হয়েছে)
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          # হেভি মেমোরি লোড বা জেভিএম স্টার্টআপের জন্য সেফটি গ্যারান্টি
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+
+          # --- LIFECYCLE HOOKS ---
+          # পড কিল হওয়ার আগে Load Balancer থেকে রুট সরাতে এবং কিউ খালি করতে সাহায্য করে
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  [
+                    "/bin/sh",
+                    "-c",
+                    "sleep 15 && /app/scripts/drain-connections.sh",
+                  ]
+
+          # --- ENVIRONMENT VARIABLES & SECRETS ---
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            # IRSA (IAM Roles for Service Accounts) ব্যবহার করার কারণে ওপেন সিক্রেট পাসওয়ার্ড নেই
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-config
+                  key: DATABASE_URL
+
+          envFrom:
+            - secretRef:
+                name: secure-vault-credentials
+
+          # --- VOLUMES MOUNT (Ephemeral or Configs) ---
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: shared-configs
+              mountPath: /app/config
+              readOnly: true
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # কন্টেইনারের ভেতর হ্যাকাররা যেন নতুন ফাইল রাইট করতে না পারে
+            capabilities:
+              drop:
+                - ALL
+
+      # --- VOLUMES DEFINITION ---
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: shared-configs
+          configMap:
+            name: application-runtime-spec

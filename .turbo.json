@@ -1,0 +1,103 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "**/.env.*.local",
+    "tsconfig.json",
+    "package.json"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_ANALYTICS_ID",
+    "DATABASE_URL",
+    "AUTH_SECRET",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "VERCEL_ENV"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "build/**",
+        "out/**"
+      ],
+      "inputs": [
+        "src/**",
+        "public/**",
+        "styles/**",
+        "next.config.js",
+        "postcss.config.js",
+        "tailwind.config.js"
+      ]
+    },
+    "topo": {
+      "dependsOn": [
+        "^topo"
+      ],
+      "cache": false
+    },
+    "lint": {
+      "dependsOn": [
+        "^topo"
+      ],
+      "outputs": [
+        ".eslintcache",
+        ".oxlintcache"
+      ],
+      "inputs": [
+        "src/**",
+        ".eslintrc*",
+        ".oxlintrc*"
+      ]
+    },
+    "type-check": {
+      "dependsOn": [
+        "^topo"
+      ],
+      "outputs": [
+        "*.tsbuildinfo"
+      ],
+      "inputs": [
+        "src/**",
+        "tsconfig.json"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ],
+      "inputs": [
+        "src/**",
+        "vitest.config.*",
+        "jest.config.*"
+      ]
+    },
+    "test:e2e": {
+      "dependsOn": [
+        "build"
+      ],
+      "outputs": [
+        "playwright-report/**",
+        "test-results/**"
+      ],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}
