@@ -148,7 +148,7 @@ The following tree preserves the repository structure and naming supplied for th
 
 ```text
 Portfolio/
-|---.github/
+|.github/
 └── workflows/
 |    ├── platform-orchestrator.yml 
 |    │
