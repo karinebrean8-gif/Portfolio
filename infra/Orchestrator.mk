@@ -54,7 +54,6 @@ deploy: render
 		deployment/$(DEPLOYMENT) \
 		-n $(NAMESPACE) \
 		--timeout=180s
-
 security:
 	@echo "Running Terraform security scan..."
 	@if command -v checkov >/dev/null; then \
