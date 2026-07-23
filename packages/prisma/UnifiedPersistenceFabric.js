@@ -116,9 +116,7 @@ class UnifiedPersistenceFabric {
         },
       });
     }
-
   }
-
 }
 
 export default UnifiedPersistenceFabric;
