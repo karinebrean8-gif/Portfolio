@@ -6,21 +6,15 @@ import {
   Calendar,
   Building2,
 } from "lucide-react";
-
 import { memo } from "react";
-
-
 const CertificateViewer = memo(
 ({
   certificate,
   onClose,
 }) => {
-
   if (!certificate) {
     return null;
   }
-
-
   const {
     title,
     issuer,
@@ -31,8 +25,6 @@ const CertificateViewer = memo(
     description,
     verified = false,
   } = certificate;
-
-
   const metadata = [
     {
       id: "issuer",
@@ -47,11 +39,7 @@ const CertificateViewer = memo(
       icon: Calendar,
     },
   ];
-
-
-
   return (
-
     <section
       role="dialog"
       aria-modal="true"
@@ -67,7 +55,6 @@ const CertificateViewer = memo(
         p-6
       "
     >
-
       <article
         className="
           w-full
@@ -81,7 +68,6 @@ const CertificateViewer = memo(
           shadow-2xl
         "
       >
-
         <header
           className="
             flex
@@ -90,14 +76,12 @@ const CertificateViewer = memo(
             gap-6
           "
         >
-
           <div
             className="
               flex
               gap-4
             "
           >
-
             <div
               className="
                 flex
@@ -112,10 +96,7 @@ const CertificateViewer = memo(
             >
               <Award size={28}/>
             </div>
-
-
             <div>
-
               <h2
                 id="certificate-title"
                 className="
@@ -125,8 +106,6 @@ const CertificateViewer = memo(
               >
                 {title}
               </h2>
-
-
               {
                 verified && (
                   <span
@@ -144,12 +123,8 @@ const CertificateViewer = memo(
                   </span>
                 )
               }
-
             </div>
-
           </div>
-
-
           <button
             type="button"
             onClick={onClose}
@@ -166,11 +141,7 @@ const CertificateViewer = memo(
           >
             ✕
           </button>
-
         </header>
-
-
-
         {
           description && (
             <p
@@ -184,9 +155,6 @@ const CertificateViewer = memo(
             </p>
           )
         }
-
-
-
         <div
           className="
             mt-8
@@ -195,7 +163,6 @@ const CertificateViewer = memo(
             sm:grid-cols-2
           "
         >
-
           {
             metadata.map(
               ({
@@ -204,7 +171,6 @@ const CertificateViewer = memo(
                 value,
                 icon: Icon,
               }) => (
-
                 <div
                   key={id}
                   className="
@@ -213,7 +179,6 @@ const CertificateViewer = memo(
                     p-4
                   "
                 >
-
                   <div
                     className="
                       flex
@@ -223,14 +188,10 @@ const CertificateViewer = memo(
                       text-slate-400
                     "
                   >
-
                     <Icon size={16}/>
 
                     {label}
-
                   </div>
-
-
                   <p
                     className="
                       mt-2
@@ -245,17 +206,11 @@ const CertificateViewer = memo(
               )
             )
           }
-
         </div>
-
-
-
-
         {
           skills.length > 0 && (
 
             <div className="mt-8">
-
               <h3
                 className="
                   text-sm
@@ -267,8 +222,6 @@ const CertificateViewer = memo(
               >
                 Skills
               </h3>
-
-
               <ul
                 className="
                   mt-3
@@ -277,7 +230,6 @@ const CertificateViewer = memo(
                   gap-2
                 "
               >
-
                 {
                   skills.map(
                     (skill)=>(
@@ -298,15 +250,9 @@ const CertificateViewer = memo(
                 }
 
               </ul>
-
             </div>
-
           )
         }
-
-
-
-
         <footer
           className="
             mt-8
@@ -314,10 +260,8 @@ const CertificateViewer = memo(
             justify-end
           "
         >
-
           {
             credential && (
-
               <a
                 href={credential}
                 target="_blank"
@@ -336,30 +280,17 @@ const CertificateViewer = memo(
                   hover:bg-emerald-400
                 "
               >
-
                 Verify Credential
-
                 <ExternalLink size={18}/>
-
               </a>
-
             )
           }
-
         </footer>
-
-
       </article>
-
     </section>
-
   );
-
 });
-
-
 CertificateViewer.displayName =
   "CertificateViewer";
-
 
 export default CertificateViewer;
