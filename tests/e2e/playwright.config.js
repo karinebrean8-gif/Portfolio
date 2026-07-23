@@ -14,22 +14,20 @@ if (!Number.isInteger(port) || port < 1 || port > 65_535) {
       'Expected an integer between 1 and 65535.',
   );
 }
+
 const host = process.env.PLAYWRIGHT_HOST?.trim() || DEFAULT_HOST;
 const localBaseURL = `http://${host}:${port}`;
 const baseURL = process.env.PLAYWRIGHT_BASE_URL?.trim() || localBaseURL;
 const shouldStartLocalServer =
   !process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_SKIP_SERVER !== '1';
-
 export default defineConfig({
   testDir: '.',
   testMatch: ['**/*.e2e.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
-
   outputDir: '../../test-results/playwright/artifacts',
   forbidOnly: isCI,
   fullyParallel: true,
   retries: isCI ? 2 : 0,
   workers: process.env.PLAYWRIGHT_WORKERS || (isCI ? 2 : undefined),
-
   timeout: 45_000,
   expect: {
     timeout: 10_000,
