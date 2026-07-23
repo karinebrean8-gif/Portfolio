@@ -165,6 +165,7 @@ const ExperienceDetails = memo(function ExperienceDetails({ experience }) {
     <article
       className={`rounded-2xl border bg-slate-900/50 p-6 shadow-2xl ${theme.border}`}
     >
+    
       <header className="border-b border-slate-800 pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-full border px-3 py-1 text-xs font-bold ${theme.badge}`}>
@@ -199,6 +200,7 @@ const ExperienceDetails = memo(function ExperienceDetails({ experience }) {
                 key={project.code}
                 className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
               >
+              
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded bg-purple-400/10 px-2 py-1 font-mono text-xs text-purple-300">
                     {project.code}
