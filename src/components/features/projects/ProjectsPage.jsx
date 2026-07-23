@@ -1,265 +1,374 @@
-/**
- * ============================================================================
- * L10 DISTINGUISHED PRINCIPAL ENTERPRISE PROJECTS MATRIX DASHBOARD
- * COMPONENT: ProjectsPage
- * PARADIGM: Declarative Data Projection, High-Performance Architectural Layout,
- * Component Memory Isolation, Zero If-Else Functional Strategy Mapping.
- * DESIGN SYSTEM: High-Contrast Cyberpunk Glassmorphic Tailwind CSS Matrix
- * ============================================================================
- */
-{/* Declarative Compute Telemetry Grid */ }
-<div className="grid grid-cols-3 gap-2 bg-slate-950/80 p-3 rounded border-slate-900 font-mono text-[11px] mb-6 relative z-10">
-    {METRICS_LABEL_LOOKUP.map((metricSpec) => (
-        <div key={`${projectNode.projectId}-metric-${metricSpec.dataKey}`}>
-            <span className="block text-slate-500 uppercase">{metricSpec.label}</span>
-            <span className="block text-slate-200 font-bold">
-                {projectNode.metrics?.[metricSpec.dataKey] || "N/A"}
-            </span>
-        </div>
-    ))}
-</div>
+```jsx
+import { memo, useEffect, useMemo, useState } from 'react';
 
-{/* Tech Stack Micro-Badges */ }
-<div className="flex flex-wrap gap-1.5 relative z-10">
-    {projectNode.technologies.slice(0, 6).map((tech) => (
-        <span key={tech} className={componentVisualBlueprint.techBadgeClass}>
-            {tech}
-        </span>
-    ))}
-</div>
+const FILTERS = {
+  ALL: 'ALL',
+  DJANGO: 'DJANGO',
+  NODE: 'NODE',
+  PLATFORM: 'PLATFORM',
+};
+const FILTER_OPTIONS = [
+  { label: 'All projects', value: FILTERS.ALL },
+  { label: 'Django', value: FILTERS.DJANGO },
+  { label: 'Node.js', value: FILTERS.NODE },
+  { label: 'Platform', value: FILTERS.PLATFORM },
+];
 
-import React, { useState, useMemo, useCallback } from "react";
-import { useClusterMatrix } from "../RealApiCluster/useClusterMatrix";
-import { useQuantumDebounce } from "../RealApiCluster/useQuantumDebounce";
+const PROJECTS = [
+  {
+    id: 'nextshop-commerce',
+    title: 'NextShop Commerce Platform',
+    subtitle: 'Full-stack multi-service e-commerce system',
+    description:
+      'A commerce platform covering product discovery, cart, checkout, payment, seller operations and administrative workflows.',
+    category: FILTERS.DJANGO,
+    status: 'Production-ready',
+    metrics: [
+      { label: 'Architecture', value: 'Modular' },
+      { label: 'API style', value: 'REST' },
+      { label: 'Persistence', value: 'PostgreSQL' },
+    ],
+    technologies: [
+      'React',
+      'Redux Toolkit',
+      'Django',
+      'Django REST Framework',
+      'PostgreSQL',
+      'Redis',
+      'Docker',
+      'Tailwind CSS',
+    ],
+  },
+  {
+    id: 'staff-portfolio',
+    title: 'Staff Engineer Portfolio',
+    subtitle: 'Cloud-native engineering portfolio',
+    description:
+      'A production-focused portfolio presenting system design, engineering experience, certifications, projects and measurable technical outcomes.',
+    category: FILTERS.PLATFORM,
+    status: 'Active',
+    metrics: [
+      { label: 'Frontend', value: 'React 19' },
+      { label: 'Delivery', value: 'CI/CD' },
+      { label: 'Infrastructure', value: 'Kubernetes' },
+    ],
+    technologies: [
+      'React',
+      'Vite',
+      'Redux Toolkit',
+      'Prisma',
+      'Docker',
+      'Kubernetes',
+      'Terraform',
+      'GitHub Actions',
+    ],
+  },
+  {
+    id: 'admin-platform',
+    title: 'Enterprise Admin Platform',
+    subtitle: 'Role-based operational management system',
+    description:
+      'An administrative platform for users, roles, permissions, analytics, billing, audit trails and system operations.',
+    category: FILTERS.NODE,
+    status: 'Architecture complete',
+    metrics: [
+      { label: 'Authorization', value: 'RBAC' },
+      { label: 'Services', value: 'Modular' },
+      { label: 'Observability', value: 'Integrated' },
+    ],
+    technologies: [
+      'Next.js',
+      'TypeScript',
+      'NestJS',
+      'Prisma',
+      'PostgreSQL',
+      'Redis',
+      'WebSockets',
+      'Kubernetes',
+    ],
+  },
+  {
+    id: 'realtime-messaging',
+    title: 'Real-Time Messaging System',
+    subtitle: 'Event-driven communication platform',
+    description:
+      'A resilient messaging system supporting authenticated sessions, real-time delivery, presence, notification processing and durable message storage.',
+    category: FILTERS.NODE,
+    status: 'Prototype',
+    metrics: [
+      { label: 'Transport', value: 'WebSocket' },
+      { label: 'Processing', value: 'Async' },
+      { label: 'Delivery', value: 'Event-driven' },
+    ],
+    technologies: [
+      'React',
+      'Node.js',
+      'Express',
+      'Socket.IO',
+      'Redis',
+      'PostgreSQL',
+      'Docker',
+    ],
+  },
+  {
+    id: 'ai-workflow-platform',
+    title: 'AI Workflow Platform',
+    subtitle: 'Context-aware automation application',
+    description:
+      'A full-stack platform for prompt-driven workflows, asynchronous processing, structured results and operational monitoring.',
+    category: FILTERS.DJANGO,
+    status: 'Research',
+    metrics: [
+      { label: 'Workflow', value: 'Async' },
+      { label: 'Search', value: 'Vector' },
+      { label: 'Interface', value: 'API-first' },
+    ],
+    technologies: [
+      'React',
+      'Python',
+      'Django',
+      'FastAPI',
+      'PostgreSQL',
+      'Vector Search',
+      'Docker',
+    ],
+  },
+];
 
-// ============================================================================
-// 1. IMMUTABLE ENTERPRISE PROJECTS REGISTRY (The Core Blueprint)
-// ============================================================================
-const ENTERPRISE_PROJECTS_MANIFEST = Object.freeze([
-
+const THEMES = new Map([
+  [
+    FILTERS.DJANGO,
     {
-        projectId: "PROJ-NC-01",
-        title: "Next-Gen Enterprise E-Commerce Platform",
-        subheading: "Hyper-Scale Distributed Retail Engine Architecture",
-        description: "A multi-tenant, microservices-driven retail engine designed for concurrent traffic mitigation, reactive global inventory state syncing, and high-frequency transactions storage optimization.",
-        stackType: "BACKEND_DJANGO",
-        technologies: ["React.js", "Microsoft Next.js", "Redux.js", "Prisma", "Cloud Ingress", "Docker Containers", "Tailwind CSS", "RESTful API", "Django Engine", "PostgreSQL", "MySQL", "UI/UX Architecture"],
-        k8sTargetPod: "pod-ecommerce-core",
-        metrics: { scaleFactor: "99.99% Uptime", throughput: "15k Req/Sec", DBReplica: "Master-Slave" }
+      border: 'border-emerald-400/30',
+      badge: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
     },
+  ],
+  [
+    FILTERS.NODE,
     {
-        projectId: "PROJ-NC-02",
-        title: "L10 Ultragod Full-Stack Portfolio Matrix",
-        subheading: "Self-Healing Reactive Cloud Ecosystem & Telemetry Proxy",
-        description: "The complete infrastructure proxy mapping your career telemetry, including active O(1) edge-caching memory networks, real-time logging buffers, and high-performance layout virtualization.",
-        stackType: "BACKEND_NODE",
-        technologies: ["React.js", "Microsoft Next.js", "Redux.js", "Prisma", "Cloud Ingress", "Docker Containers", "Tailwind CSS", "RESTful API", "Node.js Engine", "Express.js", "PostgreSQL", "MySQL", "UI/UX Architecture"],
-        k8sTargetPod: "pod-portfolio-matrix",
-        metrics: { scaleFactor: "0ms Edge Cache", throughput: "O(1) Matrix Lookup", DBReplica: "Isolated Inversion" }
+      border: 'border-cyan-400/30',
+      badge: 'border-cyan-400/20 bg-cyan-400/10 text-cyan-300',
     },
+  ],
+  [
+    FILTERS.PLATFORM,
     {
-        projectId: "PROJ-NC-03",
-        title: "Autonomous Analytical Control Dashboard App",
-        subheading: "Real-Time Telemetry and Operational Cluster Analyzer",
-        description: "An administrative mission-control console capable of parsing telemetry batch buffers, monitoring distributed K8s replica weights, and visualizing continuous background event logging loops.",
-        stackType: "BACKEND_NODE",
-        technologies: ["React.js", "Microsoft Next.js", "Redux.js", "Prisma", "Cloud Ingress", "Docker Containers", "Tailwind CSS", "RESTful API", "Node.js Engine", "Express.js", "PostgreSQL", "MySQL", "UI/UX Architecture"],
-        k8sTargetPod: "pod-dashboard-analytics",
-        metrics: { scaleFactor: "60 FPS Rendered", throughput: "400ms Batch Ingress", DBReplica: "Read-Intensive" }
+      border: 'border-purple-400/30',
+      badge: 'border-purple-400/20 bg-purple-400/10 text-purple-300',
     },
-    {
-        projectId: "PROJ-NC-04",
-        title: "Reactive Distributed Real-Time Chat System",
-        subheading: "Bi-Directional Event Stream Messaging Framework",
-        description: "A secure, non-blocking asynchronous communications engine utilizing message queues and socket pools to route live sharded packet channels between virtual pod threads.",
-        stackType: "BACKEND_NODE",
-        technologies: ["React.js", "Microsoft Next.js", "Redux.js", "Prisma", "Cloud Ingress", "Docker Containers", "Tailwind CSS", "RESTful API", "Node.js Engine", "Express.js", "PostgreSQL", "MySQL", "UI/UX Architecture"],
-        k8sTargetPod: "pod-chat-messaging",
-        metrics: { scaleFactor: "<4ms Sync Latency", throughput: "100k Active Pools", DBReplica: "Write-Heavy Node" }
-    },
-    {
-        projectId: "PROJ-NC-05",
-        title: "Cognitive AI + Full-Stack Application",
-        subheading: "Neural Pattern Synthesis and Big-Data Ingestion Layer",
-        description: "An artificial intelligence orchestration gateway paired with web layers to deliver streaming context inference pipelines, vectorized lookup steps, and automated resource tuning.",
-        stackType: "BACKEND_DJANGO",
-        technologies: ["React.js", "Microsoft Next.js", "Redux.js", "Prisma", "Cloud Ingress", "Docker Containers", "Tailwind CSS", "RESTful API", "Django Engine", "PostgreSQL", "MySQL", "UI/UX Architecture"],
-        k8sTargetPod: "pod-ai-inference",
-        metrics: { scaleFactor: "Vectorized Search", throughput: "Contextual Pipeline", DBReplica: "Sharded Datastore" }
-    }
+  ],
 ]);
+const DEFAULT_THEME = {
+  border: 'border-slate-700',
+  badge: 'border-slate-700 bg-slate-800 text-slate-300',
+};
+const loadProjects = (signal) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(PROJECTS), 220);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException('Request aborted', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
 
-// Polymorphic Glassmorphic Theming Strategy Registry
-const COMPONENT_THEMING_STRATEGY = Object.freeze({
-    BACKEND_DJANGO: {
-        cardWrapper: "relative group backdrop-blur-xl bg-slate-900/40 rounded-xl border border-emerald-500/10 p-6 hover:border-emerald-500/30 transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.02)]",
-        badge: "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-        glowEffect: "absolute -inset-px bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none blur-sm"
-    },
-    BACKEND_NODE: {
-        cardWrapper: "relative group backdrop-blur-xl bg-slate-900/40 rounded-xl border border-cyan-500/10 p-6 hover:border-cyan-500/30 transition-all duration-300 shadow-[0_0_30px_rgba(6,182,212,0.02)]",
-        badge: "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-        glowEffect: "absolute -inset-px bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none blur-sm"
-    }
+const ProjectCard = memo(function ProjectCard({ project }) {
+  const theme = THEMES.get(project.category) ?? DEFAULT_THEME;
+
+  return (
+    <article
+      className={`flex h-full flex-col rounded-2xl border bg-slate-900/50 p-6 shadow-xl transition hover:-translate-y-1 hover:bg-slate-900 ${theme.border}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${theme.badge}`}>
+          {project.category}
+        </span>
+        <span className="text-xs text-slate-500">{project.status}</span>
+      </div>
+
+      <h2 className="mt-5 text-2xl font-black text-white">{project.title}</h2>
+      <p className="mt-1 text-sm font-semibold text-emerald-400">
+        {project.subtitle}
+      </p>
+      <p className="mt-4 text-sm leading-7 text-slate-400">
+        {project.description}
+      </p>
+      <dl className="mt-6 grid grid-cols-3 gap-2">
+        {project.metrics.map(({ label, value }) => (
+          <div
+            key={label}
+            className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"
+          >
+            <dt className="text-[10px] uppercase tracking-wider text-slate-500">
+              {label}
+            </dt>
+            <dd className="mt-1 text-sm font-bold text-slate-200">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <ul className="mt-6 flex flex-wrap gap-2">
+        {project.technologies.map((technology) => (
+          <li
+            key={technology}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-300"
+          >
+            {technology}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
 });
 
-// ============================================================================
-// 2. THE MAIN PROJECTS INTERFACE VIEW
-// ============================================================================
 export default function ProjectsPage() {
-    const { systemPerformanceReportCard } = useClusterMatrix();
-    const { executeQuantumDebouncePipeline } = useQuantumDebounce();
+  const [records, setRecords] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState(FILTERS.ALL);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadProjects(controller.signal)
+      .then((data) => {
+        setRecords(data);
+        setStatus('success');
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') setStatus('error');
+      });
+    return () => controller.abort();
+  }, []);
 
-    const [activeFilterKeyword, setActiveFilterKeyword] = useState("ALL_NODES");
+  const filtered = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return records.filter((project) => {
+      const matchesFilter =
+        filter === FILTERS.ALL || project.category === filter;
+      const searchable = [
+        project.title,
+        project.subtitle,
+        project.description,
+        project.status,
+        ...project.metrics.flatMap(({ label, value }) => [label, value]),
+        ...project.technologies,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return matchesFilter && searchable.includes(search);
+    });
+  }, [filter, query, records]);
 
-    // Telemetry Search Interceptor (Wrapped inside Quantum Debounce Promise Framework)
-    const handleFilterUpdateDebounced = useCallback(
-        executeQuantumDebouncePipeline((selectedCategory) => {
-            setActiveFilterKeyword(selectedCategory);
-        }, 150),
-        [executeQuantumDebouncePipeline]
-    );
+  const stats = useMemo(
+    () => [
+      { label: 'Projects', value: records.length },
+      {
+        label: 'Technologies',
+        value: new Set(records.flatMap(({ technologies }) => technologies)).size,
+      },
+      {
+        label: 'Categories',
+        value: new Set(records.map(({ category }) => category)).size,
+      },
+      {
+        label: 'Active',
+        value: records.filter(({ status }) => status === 'Active').length,
+      },
+    ],
+    [records],
+  );
 
-    // Memoized Filtered List Resolution (Zero Garbage Collection Allocation)
-    const filteredProjectsMatrix = useMemo(() => {
-        // Strategy Lookups replacing classical multi-branch nesting
-        const filterConditionsMap = {
-            ALL_NODES: () => true,
-            BACKEND_DJANGO: (item) => item.stackType === "BACKEND_DJANGO",
-            BACKEND_NODE: (item) => item.stackType === "BACKEND_NODE"
-        };
-
-        const targetEvaluatorFn = filterConditionsMap[activeFilterKeyword] || filterConditionsMap.ALL_NODES;
-        return ENTERPRISE_PROJECTS_MANIFEST.filter(targetEvaluatorFn);
-    }, [activeFilterKeyword]);
-
+  if (status === 'loading') {
     return (
-        <div className="min-h-screen w-full bg-[#030712] text-slate-100 px-6 py-12 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
-
-            {/* ─── TELEMETRY TOP HEADER RUNWAY ─── */}
-            <header className="max-w-7xl mx-auto mb-16 border-b border-slate-900 pb-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                            <p className="text-xs font-mono tracking-widest text-cyan-400 uppercase">System Production Node: Portfolio</p>
-                        </div>
-                        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 bg-clip-text text-transparent">
-                            Distributed Projects Fabric
-                        </h1>
-                    </div>
-
-                    {/* Infrastructure Metrics Badge Board */}
-                    <div className="flex gap-4 font-mono bg-slate-950/60 p-4 rounded-lg border border-slate-900 text-xs">
-                        <div>
-                            <p className="text-slate-500">ENGINE_STATUS</p>
-                            <p className="text-emerald-400 font-bold">ONLINE (K8S)</p>
-                        </div>
-                        <div className="border-l border-slate-800 pl-4">
-                            <p className="text-slate-500">BUFFER_UPTIME</p>
-                            <p className="text-slate-300">{systemPerformanceReportCard.formattedUptime || "0.0s"}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Dynamic Filter Controls Matrix */}
-                <div className="mt-8 flex gap-2 font-mono">
-                    {["ALL_NODES", "BACKEND_DJANGO", "BACKEND_NODE"].map((filterKey) => (
-                        <button
-                            key={filterKey}
-                            onClick={() => handleFilterUpdateDebounced(filterKey)}
-                            className={`px-4 py-1.5 rounded text-xs font-bold transition-all border ${activeFilterKeyword === filterKey
-                                ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
-                                : "bg-slate-950 text-slate-400 border-slate-900 hover:border-slate-800 hover:text-slate-200"
-                                }`}
-                        >
-                            {filterKey === "ALL_NODES" ? "SYS_SHOW_ALL" : `FILTER_${filterKey}`}
-                        </button>
-                    ))}
-                </div>
-            </header>
-
-            {/* ─── GRID REPLICAS STREAM RUNWAY ─── */}
-            <main className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-2 gap-8">
-                {filteredProjectsMatrix.map((projectNode) => {
-                    const activeThemeSpec = COMPONENT_THEMING_STRATEGY[projectNode.stackType] || COMPONENT_THEMING_STRATEGY.BACKEND_NODE;
-
-                    return (
-                        <section
-                            key={projectNode.projectId}
-                            className={activeThemeSpec.cardWrapper}
-                        >
-                            {/* Kinetic Glow Ambient Box */}
-                            <div className={activeThemeSpec.glowEffect} />
-
-                            {/* Card Meta Row Header */}
-                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                <span className="font-mono text-xs text-slate-500 tracking-wider">
-                                    [{projectNode.projectId}] // {projectNode.k8sTargetPod}
-                                </span>
-                                <span className={activeThemeSpec.badge}>
-                                    {projectNode.stackType.replace("BACKEND_", "")} CORE
-                                </span>
-                            </div>
-
-                            {/* Title Aggregators */}
-                            <div className="mb-4 relative z-10">
-                                <h2 className="text-xl font-bold text-slate-100 group-hover:text-cyan-400/90 transition-colors duration-300">
-                                    {projectNode.title}
-                                </h2>
-                                <p className="text-xs font-mono text-slate-400 mt-1">
-                                    {projectNode.subheading}
-                                </p>
-                            </div>
-
-                            {/* Core Description Abstract */}
-                            <p className="text-sm text-slate-400 leading-relaxed mb-6 relative z-10">
-                                {projectNode.description}
-                            </p>
-
-                            {/* Compute Telemetry Specs Table */}
-                            <div className="grid grid-cols-3 gap-2 bg-slate-950/80 p-3 rounded border border-slate-900 font-mono text-[11px] mb-6 relative z-10">
-                                <div>
-                                    <span className="block text-slate-600">CAPACITY</span>
-                                    <span className="text-slate-300 font-medium">{projectNode.metrics.scaleFactor}</span>
-                                </div>
-                                <div>
-                                    <span className="block text-slate-600">THROUGHPUT</span>
-                                    <span className="text-slate-300 font-medium">{projectNode.metrics.throughput}</span>
-                                </div>
-                                <div>
-                                    <span className="block text-slate-600">DB_TOPOLOGY</span>
-                                    <span className="text-slate-300 font-medium">{projectNode.metrics.DBReplica}</span>
-                                </div>
-                            </div>
-
-                            {/* Technology Tags Stack Matrix Iteration */}
-                            <div className="relative z-10">
-                                <h4 className="text-[10px] font-mono font-bold text-slate-600 tracking-wider uppercase mb-2">
-                                    Ingested Technology Vectors
-                                </h4>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {projectNode.technologies.map((techItem, index) => (
-                                        <span
-                                            key={`${projectNode.projectId}-tech-${index}`}
-                                            className="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-900 text-[11px] font-mono hover:text-cyan-400 hover:border-cyan-500/20 transition-colors"
-                                        >
-                                            {techItem}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-                    );
-                })}
-            </main>
-
-            {/* Null-State Strategy Guard */}
-            {filteredProjectsMatrix.length === 0 && (
-                <div className="max-w-7xl mx-auto text-center py-20 font-mono text-slate-500 text-sm border border-dashed border-slate-900 rounded-xl">
-                    [CRITICAL]: Zero projects resolved matching current active matrix filters.
-                </div>
-            )}
-        </div>
+      <main className="min-h-screen bg-slate-950 px-5 py-24 text-center text-slate-400">
+        Loading projects…
+      </main>
     );
+  }
+  if (status === 'error') {
+    return (
+      <main className="min-h-screen bg-slate-950 px-5 py-24">
+        <p className="mx-auto max-w-xl rounded-xl border border-rose-500/30 bg-rose-950/20 p-8 text-center text-rose-300">
+          Projects could not be loaded.
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-5 py-14 text-slate-100 md:px-10">
+      <div className="mx-auto max-w-7xl">
+        <header>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">
+            Selected engineering work
+          </p>
+          <h1 className="mt-4 text-4xl font-black tracking-tight md:text-6xl">
+            Projects
+          </h1>
+          <p className="mt-5 max-w-3xl leading-7 text-slate-400">
+            Product systems, platforms and distributed applications designed
+            with production-focused architecture and measurable engineering
+            outcomes.
+          </p>
+          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {stats.map(({ label, value }) => (
+              <div
+                key={label}
+                className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+              >
+                <p className="text-xs uppercase tracking-wider text-slate-500">
+                  {label}
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+        </header>
+        <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+          <input
+            type="search"
+            value={query}
+            onChange={({ target }) => setQuery(target.value)}
+            placeholder="Search projects, technologies or architecture"
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
+          />
+          
+          <div className="mt-4 flex flex-wrap gap-2">
+            {FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFilter(option.value)}
+                className={`rounded-lg border px-4 py-2 text-xs font-semibold transition ${
+                  filter === option.value
+                    ? 'border-emerald-400 bg-emerald-400 text-slate-950'
+                    : 'border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+        <p className="mt-6 text-sm text-slate-400">
+          Showing <strong className="text-white">{filtered.length}</strong> of{' '}
+          {records.length} projects
+        </p>
+
+        {filtered.length ? (
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            {filtered.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </section>
+        ) : (
+          <p className="mt-8 rounded-xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+            No matching projects found.
+          </p>
+        )}
+      </div>
+    </main>
+  );
 }
+```
