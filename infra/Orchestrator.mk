@@ -1,17 +1,11 @@
 SHELL := /bin/bash
-
 ENV ?= production
 REGION ?= us-east-1
-
 TF_DIR := ./terraform
 K8S_DIR := ./k8s/overlays/$(ENV)
-
 DEPLOYMENT := ultrafaang-ultragod-fullstack-core
 NAMESPACE := production
-
 .PHONY: help init validate plan apply render deploy security destroy
-
-
 help:
 	@echo "Infrastructure Control Plane"
 	@echo ""
@@ -24,26 +18,20 @@ help:
 	@echo "make security   - Run security scans"
 	@echo "make destroy    - Destroy infrastructure"
 
-
 init:
 	@echo "Initializing Terraform..."
 	cd $(TF_DIR) && terraform init -input=false
-
-
 validate:
 	@echo "Validating Terraform..."
 	cd $(TF_DIR) && terraform validate
 	@echo "Validating Kubernetes..."
 	kubectl kustomize $(K8S_DIR) >/dev/null
 
-
 plan:
 	@echo "Creating Terraform plan..."
 	cd $(TF_DIR) && terraform plan \
 		-out=tfplan.binary \
 		-input=false
-
-
 apply:
 	@echo "Applying Terraform plan..."
 	cd $(TF_DIR) && terraform apply \
@@ -51,26 +39,21 @@ apply:
 		tfplan.binary
 	rm -f $(TF_DIR)/tfplan.binary
 
-
 render:
 	@echo "Rendering Kubernetes manifests..."
 	mkdir -p build
 	kubectl kustomize $(K8S_DIR) > build/$(ENV)-manifest.yaml
 
-
 deploy: render
 	@echo "Checking Kubernetes context..."
 	kubectl config current-context
-
 	@echo "Deploying workload..."
 	kubectl apply -f build/$(ENV)-manifest.yaml
-
 	@echo "Waiting rollout..."
 	kubectl rollout status \
 		deployment/$(DEPLOYMENT) \
 		-n $(NAMESPACE) \
 		--timeout=180s
-
 
 security:
 	@echo "Running Terraform security scan..."
@@ -79,14 +62,12 @@ security:
 	else \
 		echo "Checkov unavailable"; \
 	fi
-
 	@echo "Running Kubernetes security scan..."
 	@if command -v kubescape >/dev/null; then \
 		kubescape scan $(K8S_DIR); \
 	else \
 		echo "Kubescape unavailable"; \
 	fi
-
 
 destroy:
 	@echo "Production destruction requested"
