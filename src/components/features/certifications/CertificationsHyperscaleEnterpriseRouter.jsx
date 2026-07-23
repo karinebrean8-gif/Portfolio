@@ -1,446 +1,252 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-// React Router Core Ingress - (যদি প্রোজেক্টে ইনস্টল করা থাকে, সরাসরি রান করবে)
-import { BrowserRouter, Routes, Route, useNavigate, useParams, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 
-// ============================================================================
-// LAYER 1: IMMUTABLE MANIFEST & INFRASTRUCTURE CONFIGURATIONS
-// ============================================================================
-
-const GATEWAY_SPECS = Object.freeze({
-    INGRESS_ENDPOINT: process.env.REACT_APP_API_URL || "https://api.ultra-faang.internal/v2",
-    SECURE_TENANT_ID: "TENANT-L15-ULTRAGOD",
-    TIMEOUT_MS: 5000
-});
-
-// Certification.mainfest.json Layer
-const CERTIFICATION_MANIFEST = Object.freeze([
-    {
-        id: "aws-networking-2024",
-        title: "AWS Certified Advanced Networking - Specialty",
-        authority: "Amazon Web Services",
-        licenseNumber: "AWS-NET-ADV-992",
-        issueDate: "2024",
-        verificationUrl: "https://aws.amazon.com/verification/aws-net-adv-992",
-        skills: ["BGP Routing", "Multi-Region VPC Mesh", "AWS Direct Connect", "Transit Gateway"],
-        tier: "CRITICAL_INFRASTRUCTURE"
-    },
-    {
-        id: "gcp-fellow-2023",
-        title: "Google Cloud Certified Fellow - Hybrid Cloud Architect",
-        authority: "Google Cloud",
-        licenseNumber: "GCP-FELLOW-8810",
-        issueDate: "2023",
-        verificationUrl: "https://cloud.google.com/verification/gcp-fellow-8810",
-        skills: ["Anthos Service Mesh", "Bare Metal Compute Clusters", "Distributed Consensus Routing"],
-        tier: "HYPERSCALE_ARCHITECTURE"
-    },
-    {
-        id: "cka-kubernetes-2022",
-        title: "Certified Kubernetes Administrator (CKA)",
-        authority: "The Linux Foundation",
-        licenseNumber: "CKA-7719-0012",
-        issueDate: "2022",
-        verificationUrl: "https://linuxfoundation.org/verify/cka-7719-0012",
-        skills: ["Container Security", "etcd Cluster Recovery", "eBPF Kernel Instrumentation"],
-        tier: "CRITICAL_INFRASTRUCTURE"
-    }
+const CERTIFICATIONS = Object.freeze([
+  {
+    id: "meta-frontend-developer",
+    title: "Meta Front-End Developer",
+    issuer: "Meta",
+    issued: "2024",
+    category: "Frontend",
+    credential: "Add credential ID",
+    url: "https://www.coursera.org/account/accomplishments",
+    description: "Professional training in React, JavaScript, responsive interfaces, accessibility, version control, and production frontend delivery.",
+    skills: ["React", "JavaScript", "Accessibility", "Responsive Design"]
+  },
+  {
+    id: "meta-backend-developer",
+    title: "Meta Back-End Developer",
+    issuer: "Meta",
+    issued: "2024",
+    category: "Backend",
+    credential: "Add credential ID",
+    url: "https://www.coursera.org/account/accomplishments",
+    description: "Backend engineering program covering Python, Django, APIs, databases, authentication, testing, and secure application design.",
+    skills: ["Python", "Django", "REST APIs", "SQL"]
+  },
+  {
+    id: "microsoft-full-stack-capstone",
+    title: "Microsoft Full-Stack Developer Capstone",
+    issuer: "Microsoft",
+    issued: "2025",
+    category: "Full Stack",
+    credential: "Add credential ID",
+    url: "https://www.coursera.org/account/accomplishments",
+    description: "Capstone delivery combining frontend, backend, cloud, testing, deployment, and modern software engineering practices.",
+    skills: ["React", "Node.js", "Cloud", "CI/CD"]
+  },
+  {
+    id: "aws-cloud-architecture",
+    title: "AWS Cloud Architecture",
+    issuer: "Amazon Web Services",
+    issued: "2025",
+    category: "Cloud",
+    credential: "Add credential ID",
+    url: "https://www.coursera.org/account/accomplishments",
+    description: "Cloud architecture training focused on scalable services, reliability, security, networking, and cost-aware AWS design.",
+    skills: ["AWS", "Architecture", "Security", "Reliability"]
+  }
 ]);
 
-// ============================================================================
-// LAYER 2: SYSTEM INFRASTRUCTURE & MULTI-TENANT SERVICES
-// ============================================================================
-
-const LoggerConsoleService = {
-    log: (msg, src = "CORE") => console.log(`%c[${src}]: ${msg}`, "color: #38bdf8; font-family: monospace;"),
-    warn: (msg, src = "WARN") => console.warn(`%c[${src}]: ${msg}`, "color: #fbbf24; font-weight: bold; font-family: monospace;")
-};
-
-const SecurityAuthorityService = {
-    signToken: async (payload) => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const signatureBytes = btoa(JSON.stringify(payload)).substring(0, 24);
-                resolve(`SHA256//SECURE-SIG.${signatureBytes}`);
-            }, 20);
-        });
-    }
-};
-
-const EdgeCacheTelemetryService = {
-    syncPayload: async (telemetryNode) => {
-        const abortToken = new AbortController();
-        const threadTimer = setTimeout(() => abortToken.abort(), GATEWAY_SPECS.TIMEOUT_MS);
-
-        try {
-            const secureHandshake = await SecurityAuthorityService.signToken(telemetryNode);
-            const ingressConfig = {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Tenant-Signature": secureHandshake,
-                    "X-Matrix-Ingress": GATEWAY_SPECS.SECURE_TENANT_ID
-                },
-                body: JSON.stringify({ telemetryNode, timestamp: new Date().toISOString() }),
-                signal: abortToken.signal
-            };
-
-            // Live Telemetry Stream Ingress
-            const response = await fetch(`${GATEWAY_SPECS.INGRESS_ENDPOINT}/telemetry`, ingressConfig);
-            clearTimeout(threadTimer);
-            return response.ok;
-        } catch (fault) {
-            clearTimeout(threadTimer);
-            LoggerConsoleService.warn(`Telemetry pipeline deferred. Safe static caching applied: ${fault.message}`);
-            return false;
-        }
-    }
-};
-
-const MultiTenantInversionService = Object.freeze({
-    provideContextFabric: () => ({
-        logger: LoggerConsoleService,
-        telemetry: EdgeCacheTelemetryService,
-        security: SecurityAuthorityService,
-        immutableRegistry: CERTIFICATION_MANIFEST
-    })
-});
-
-// ============================================================================
-// LAYER 3: COMPOSABLE COMPUTATION HOOKS (Core Engine State Pipelines)
-// ============================================================================
-
-export function useQuantumDebounce(callbackFn, delayMs = 200) {
-    const processRef = useRef(null);
-    return useCallback((...args) => {
-        if (processRef.current) clearTimeout(processRef.current);
-        processRef.current = setTimeout(() => callbackFn(...args), delayMs);
-    }, [callbackFn, delayMs]);
-}
-
-export function useTelemetryPipeline() {
-    const fabric = useMemo(() => MultiTenantInversionService.provideContextFabric(), []);
-
-    const dispatchTelemetry = useCallback(async (actionType, resourceId) => {
-        fabric.logger.log(`Dispatching telemetry vector for event: ${actionType}`, "TELEMETRY_PIPELINE");
-        const nodePayload = { actionType, resourceId, route: window.location.pathname };
-        await fabric.telemetry.syncPayload(nodePayload);
-    }, [fabric]);
-
-    return { dispatchTelemetry, fabric };
-}
-
-export function useClusterMatrix() {
-    const { dispatchTelemetry, fabric } = useTelemetryPipeline();
-    const [registryState] = useState([...fabric.immutableRegistry]);
-    const [searchFilter, setSearchFilter] = useState("");
-
-    const actualFilteredMatrix = useMemo(() => {
-        if (!searchFilter) return registryState;
-        const cleanQuery = searchFilter.toLowerCase().trim();
-        return registryState.filter(node =>
-            node.title.toLowerCase().includes(cleanQuery) ||
-            node.authority.toLowerCase().includes(cleanQuery) ||
-            node.skills.some(skill => skill.toLowerCase().includes(cleanQuery))
-        );
-    }, [registryState, searchFilter]);
-
-    const updateSearchQuery = useQuantumDebounce((query) => {
-        setSearchFilter(query);
-        dispatchTelemetry("SEARCH_QUERY_EXECUTION", query || "ALL_FABRIC");
-    }, 250);
-
-    return { actualFilteredMatrix, updateSearchQuery, dispatchTelemetry };
-}
-
-export function useVirtualScrollManager(itemsCount, rowHeight = 185) {
-    const [scrollTop, setScrollTop] = useState(0);
-    const containerViewportRef = useRef(null);
-
-    const handleScrollEvent = useCallback((event) => {
-        setScrollTop(event.currentTarget.scrollTop);
-    }, []);
-
-    const dimensions = useMemo(() => {
-        const totalHeight = itemsCount * rowHeight;
-        const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 1);
-        const endIndex = Math.min(itemsCount - 1, Math.floor((scrollTop + 500) / rowHeight) + 1);
-
-        return { totalHeight, startIndex, endIndex, offsetTop: startIndex * rowHeight };
-    }, [scrollTop, itemsCount, rowHeight]);
-
-    return { containerViewportRef, handleScrollEvent, dimensions };
-}
-
-// ============================================================================
-// LAYER 4: MEMOIZED VDOM COMPONENTS (Atomic UI Nodes)
-// ============================================================================
-
-// --- VerificationLink.jsx ---
-const VerificationLink = React.memo(({ url, onInterceptTelemetry }) => (
-    <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={onInterceptTelemetry}
-        className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border border-cyan-500/20 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-500/40 transition-all duration-200"
+const FILTERS = Object.freeze(["All", "Frontend", "Backend", "Full Stack", "Cloud"]);
+const normalize = value => value.trim().toLowerCase();
+const loadCertifications = () =>
+  new Promise(resolve => window.setTimeout(() => resolve(CERTIFICATIONS), 180));
+const matchesSearch = (item, query) =>
+  [item.title, item.issuer, item.category, item.description, ...item.skills]
+    .some(value => normalize(value).includes(query));
+const CertificationCard = ({ item, onOpen }) => (
+  <article className="group flex h-full flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl shadow-black/10 transition hover:-translate-y-1 hover:border-violet-400/50">
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">
+          {item.category}
+        </span>
+        <h2 className="mt-3 text-xl font-bold leading-7 text-white">{item.title}</h2>
+      </div>
+      <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
+        {item.issued}
+      </span>
+    </div>
+    <p className="mt-3 text-sm font-medium text-slate-400">Issued by {item.issuer}</p>
+    <p className="mt-5 flex-1 text-sm leading-6 text-slate-300">{item.description}</p>
+    <div className="mt-6 flex flex-wrap gap-2">
+      {item.skills.map(skill => (
+        <span key={skill} className="rounded-full bg-slate-950 px-3 py-1 text-xs text-slate-400 ring-1 ring-slate-800">
+          {skill}
+        </span>
+      ))}
+    </div>
+    <button
+      type="button"
+      onClick={() => onOpen(item.id)}
+      className="mt-6 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
     >
-        <span>Verify Original</span>
-        <span className="text-[9px]">↗</span>
-    </a>
-));
-VerificationLink.displayName = "VerificationLink";
+      View credential
+    </button>
+  </article>
+);
 
-// --- SkillFromCertification.jsx ---
-const SkillFromCertification = React.memo(({ technicalTags }) => (
-    <div className="flex flex-wrap gap-1.5 mt-4">
-        {technicalTags.map((skill, index) => (
-            <span
-                key={index}
-                className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-900 font-semibold select-none"
-            >
-                {skill}
-            </span>
-        ))}
-    </div>
-));
-SkillFromCertification.displayName = "SkillFromCertification";
+const LoadingState = () => (
+  <div className="grid gap-6 md:grid-cols-2" aria-label="Loading certifications">
+    {[0, 1, 2, 3].map(item => (
+      <div key={item} className="h-80 animate-pulse rounded-3xl border border-slate-800 bg-slate-900/60" />
+    ))}
+  </div>
+);
+const EmptyState = () => (
+  <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/40 px-6 py-16 text-center">
+    <h2 className="text-xl font-semibold text-white">No certifications found</h2>
+    <p className="mt-2 text-sm text-slate-400">Try another keyword or category.</p>
+  </div>
+);
 
-// --- CertificationDetails.jsx ---
-const CertificationDetails = React.memo(({ authority, id, license }) => (
-    <div className="font-mono text-xs space-y-1 text-slate-400 mt-2 border-l border-slate-900/80 pl-3">
-        <div className="flex items-center gap-1.5">
-            <span className="text-slate-600 text-[10px]">ISSUER:</span>
-            <span className="text-slate-300 font-bold">{authority}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-            <span className="text-slate-600 text-[10px]">VERIFY_ID:</span>
-            <span className="text-slate-500 text-[11px]">[{id}] // {license}</span>
-        </div>
-    </div>
-));
-CertificationDetails.displayName = "CertificationDetails";
-
-// --- CertificationsCard.jsx ---
-const CertificationsCard = React.memo(({ nodeData, onTriggerVerification, onTelemetryEvent }) => {
-    const handleUrlInterception = useCallback(() => {
-        onTelemetryEvent("VERIFICATION_LINK_REDIRECT", nodeData.id);
-    }, [nodeData.id, onTelemetryEvent]);
-
-    return (
-        <div className="relative group bg-slate-900/30 rounded-xl border border-slate-900 hover:border-slate-800 p-5 transition-all duration-300 flex flex-col justify-between h-[170px]">
-            <div>
-                <div className="flex justify-between items-start">
-                    <h3 className="text-base font-black tracking-tight text-slate-200 group-hover:text-purple-400 transition-colors truncate max-w-[80%]">
-                        {nodeData.title}
-                    </h3>
-                    <span className="text-[10px] font-mono text-slate-500 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-900">
-                        {nodeData.issueDate}
-                    </span>
-                </div>
-
-                <CertificationDetails authority={nodeData.authority} id={nodeData.id} license={nodeData.licenseNumber} />
-                <SkillFromCertification technicalTags={nodeData.skills} />
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-950 flex justify-between items-center">
-                <button
-                    onClick={() => onTriggerVerification(nodeData.id)}
-                    className="text-[10px] font-mono font-bold text-purple-400 hover:text-purple-300 cursor-pointer"
-                >
-                    ⚡ OPEN_DYNAMIC_ROUTE
-                </button>
-                <VerificationLink url={nodeData.verificationUrl} onInterceptTelemetry={handleUrlInterception} />
-            </div>
-        </div>
-    );
-});
-CertificationsCard.displayName = "CertificationsCard";
-
-// ============================================================================
-// LAYER 5: ROUTE PAGES & SUB-SYSTEM VIEWS
-// ============================================================================
-
-// --- Master Dashboard View Page ---
 function CertificationsPage() {
-    const navigate = useNavigate();
-    const { actualFilteredMatrix, updateSearchQuery, dispatchTelemetry } = useClusterMatrix();
-    const { containerViewportRef, handleScrollEvent, dimensions } = useVirtualScrollManager(actualFilteredMatrix.length, 185);
+  const navigate = useNavigate();
+  const [items, setItems] = useState([]);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const [status, setStatus] = useState("loading");
+  useEffect(() => {
+    let active = true;
+    loadCertifications()
+      .then(data => {
+        if (!active) return;
+        setItems(data);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (active) setStatus("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-    const routeToCertificateNode = useCallback((id) => {
-        dispatchTelemetry("ROUTER_NAVIGATE_DETAILS", id);
-        navigate(`/certification/${id}`);
-    }, [navigate, dispatchTelemetry]);
+  const visibleItems = useMemo(() => {
+    const search = normalize(query);
+    return items.filter(item => {
+      const matchesCategory = category === "All" || item.category === category;
+      return matchesCategory && (!search || matchesSearch(item, search));
+    });
+  }, [items, query, category]);
+  const openCertificate = useCallback(
+    id => navigate(`/certifications/${id}`),
+    [navigate]
+  );
 
-    const visibleCardSlices = useMemo(() => {
-        return actualFilteredMatrix.slice(dimensions.startIndex, dimensions.endIndex + 1);
-    }, [actualFilteredMatrix, dimensions.startIndex, dimensions.endIndex]);
-
-    return (
-        <div className="max-w-4xl mx-auto relative z-10">
-            <header className="mb-12 border-b border-slate-900 pb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-                        <p className="text-xs font-mono tracking-widest text-purple-400 uppercase">L15 Quantum Router Layer</p>
-                    </div>
-                    <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 to-slate-500 bg-clip-text text-transparent">
-                        Credentials Matrix
-                    </h1>
-                </div>
-
-                <div className="w-full md:w-72 font-mono">
-                    <input
-                        type="text"
-                        placeholder="[Search secure clusters...]"
-                        onChange={(e) => updateSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-900 focus:border-purple-500/40 text-xs px-4 py-2.5 rounded text-slate-300 focus:outline-none placeholder:text-slate-700 font-bold transition-all"
-                    />
-                </div>
-            </header>
-
-            <div className="mb-6 flex justify-between items-center font-mono text-[10px] text-slate-500 uppercase tracking-wider px-1">
-                <span>// BUFFER_VIRTUALIZATION_PIPELINE_STABLE</span>
-                <span>COMPUTE_NODES: {actualFilteredMatrix.length}</span>
-            </div>
-
-            {actualFilteredMatrix.length === 0 ? (
-                <div className="text-center py-24 bg-slate-950/40 rounded-xl border border-slate-900/60 font-mono text-xs text-slate-600">
-                    NO CREDENTIAL MATRIX RECORDED IN RUNTIME CORE BUFFERS.
-                </div>
-            ) : (
-                <div
-                    ref={containerViewportRef}
-                    onScroll={handleScrollEvent}
-                    className="overflow-y-auto max-h-[600px] rounded-xl border border-slate-900/30"
-                    style={{ position: "relative" }}
-                >
-                    <div style={{ height: `${dimensions.totalHeight}px`, width: "100%", position: "relative" }}>
-                        <div
-                            className="grid grid-cols-1 gap-4 w-full px-1"
-                            style={{
-                                transform: `translateY(${dimensions.offsetTop}px)`,
-                                position: "absolute",
-                                left: 0,
-                                top: 0
-                            }}
-                        >
-                            {visibleCardSlices.map((item) => (
-                                <CertificationsCard
-                                    key={item.id}
-                                    nodeData={item}
-                                    onTriggerVerification={routeToCertificateNode}
-                                    onTelemetryEvent={dispatchTelemetry}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+  return (
+    <section className="mx-auto max-w-6xl">
+      <header className="border-b border-slate-800 pb-10">
+        <p className="text-sm font-semibold tracking-[0.22em] text-violet-400">CERTIFICATIONS</p>
+        <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight text-white sm:text-6xl">
+          Verified learning across product engineering and cloud systems.
+        </h1>
+        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-400">
+          Professional credentials supporting frontend, backend, full-stack, architecture, and delivery expertise.
+        </p>
+      </header>
+      <div className="flex flex-col gap-5 py-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map(filter => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setCategory(filter)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                category === filter
+                  ? "bg-violet-500 text-white"
+                  : "border border-slate-800 text-slate-400 hover:border-violet-400 hover:text-white"
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
         </div>
-    );
+        <label className="block w-full lg:w-80">
+          <span className="sr-only">Search certifications</span>
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search certifications"
+            className="w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20"
+          />
+        </label>
+      </div>
+      {status === "loading" && <LoadingState />}
+      {status === "error" && (
+        <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-8 text-rose-200">
+          Certifications could not be loaded.
+        </div>
+      )}
+      {status === "ready" && (
+        visibleItems.length ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {visibleItems.map(item => (
+              <CertificationCard key={item.id} item={item} onOpen={openCertificate} />
+            ))}
+          </div>
+        ) : <EmptyState />
+      )}
+    </section>
+  );
 }
 
-// --- Dynamic Certificate Viewer Page (Dedicated Route Screen) ---
-function CertificateViewer() {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const { dispatchTelemetry } = useTelemetryPipeline();
+function CertificationDetailsPage() {
+  const { certificationId } = useParams();
+  const item = CERTIFICATIONS.find(certificate => certificate.id === certificationId);
 
-    const selectedCertificate = useMemo(() => {
-        return CERTIFICATION_MANIFEST.find(node => node.id === id);
-    }, [id]);
-
-    useEffect(() => {
-        if (id) dispatchTelemetry("MOUNTED_DYNAMIC_ROUTE_VIEWER", id);
-    }, [id, dispatchTelemetry]);
-
-    if (!selectedCertificate) {
-        return (
-            <div className="max-w-xl mx-auto text-center py-20 font-mono text-xs text-amber-500 bg-slate-950/40 border border-slate-900 rounded-xl">
-                <p>[CRITICAL METRIC CONTEXT FAULT]: NODE ID NOT LOCATED IN MANIFEST.</p>
-                <button onClick={() => navigate("/")} className="mt-4 px-4 py-2 bg-slate-900 text-slate-300 border border-slate-800 rounded text-[11px] cursor-pointer">
-                    RETURN_TO_CORE_ROUTER
-                </button>
-            </div>
-        );
-    }
-
+  if (!item) {
     return (
-        <div className="max-w-2xl mx-auto bg-slate-900 border border-purple-500/20 rounded-2xl p-6 sm:p-8 shadow-[0_0_50px_rgba(168,85,247,0.08)] font-mono relative z-10">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-6">
-                <span className="text-purple-400 font-bold flex items-center gap-2 text-xs">
-                    <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-                    ISOLATED_SECURE_VERIFICATION_ROUTER
-                </span>
-                <button
-                    onClick={() => { dispatchTelemetry("ROUTER_EXIT_DETAILS", id); navigate("/"); }}
-                    className="text-slate-500 hover:text-slate-300 text-xs cursor-pointer"
-                >
-                    [RETURN_TO_CORE]
-                </button>
-            </div>
-
-            <div className="bg-slate-950 p-6 rounded-xl border border-slate-800/80 space-y-5">
-                <div>
-                    <span className="text-[10px] text-slate-500 block mb-1">// SYSTEM VERIFIED NODE RECORD</span>
-                    <h2 className="text-xl font-black text-slate-100 tracking-tight">{selectedCertificate.title}</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-900">
-                    <div>
-                        <span className="text-slate-600 block text-[10px]">ISSUER MATRIX</span>
-                        <span className="text-slate-300 font-bold">{selectedCertificate.authority}</span>
-                    </div>
-                    <div>
-                        <span className="text-slate-600 block text-[10px]">SECURITY ENCRYPTION TIER</span>
-                        <span className="text-cyan-400 font-bold">{selectedCertificate.tier}</span>
-                    </div>
-                    <div>
-                        <span className="text-slate-600 block text-[10px]">LICENSE SERIAL NUMBER</span>
-                        <span className="text-slate-400 font-bold">{selectedCertificate.licenseNumber}</span>
-                    </div>
-                    <div>
-                        <span className="text-slate-600 block text-[10px]">PRODUCTION STATE</span>
-                        <span className="text-emerald-400 font-bold">ACTIVE_NODE_VERIFIED</span>
-                    </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-900">
-                    <span className="text-slate-600 block text-[10px] mb-2">VERIFIED CORE COMPETENCIES</span>
-                    <div className="flex flex-wrap gap-2">
-                        {selectedCertificate.skills.map((skill, index) => (
-                            <span key={index} className="text-[11px] px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">
-                                {skill}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="mx-auto max-w-xl rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center">
+        <h1 className="text-2xl font-bold text-white">Credential not found</h1>
+        <Link to="/certifications" className="mt-6 inline-flex rounded-xl bg-violet-500 px-5 py-2.5 font-semibold text-white hover:bg-violet-400">
+          Back to certifications
+        </Link>
+      </div>
     );
-}
+  }
 
-// ============================================================================
-// LAYER 6: GLOBAL ROOT APP ROUTER ORCHESTRATION CONTAINER
-// ============================================================================
+  return (
+    <article className="mx-auto max-w-3xl">
+      <Link to="/certifications" className="text-sm font-semibold text-violet-400 hover:text-violet-300">
+        ← Back to certifications
+      </Link>
+      <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900/60 p-7 sm:p-10">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-400">{item.category}</p>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-5xl">{item.title}</h1>
+        <p className="mt-4 text-slate-400">{item.issuer} · Issued {item.issued}</p>
+        <p className="mt-8 text-lg leading-8 text-slate-300">{item.description}</p>
+        <dl className="mt-8 grid gap-5 border-t border-slate-800 pt-8 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-slate-500">Credential ID</dt>
+            <dd className="mt-2 text-sm font-semibold text-slate-200">{item.credential}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-slate-500">Core skills</dt>
+            <dd className="mt-2 text-sm font-semibold text-slate-200">{item.skills.join(" · ")}</dd>
+          </div>
+        </dl>
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 inline-flex rounded-xl bg-violet-500 px-5 py-3 font-semibold text-white transition hover:bg-violet-400"
+        >
+          Verify credential ↗
+        </a>
+      </div>
+    </article>
+  );
+}
 
 export default function CertificationsHyperscaleEnterpriseRouter() {
-    return (
-        <BrowserRouter>
-            <div className="min-h-screen w-full bg-[#030712] text-slate-100 px-6 sm:px-12 py-16 font-sans antialiased relative overflow-hidden selection:bg-purple-500/30 selection:text-purple-200">
-
-                {/* Absolute Architectural Grid Canvas Background */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293708_1px,transparent_1px),linear-gradient(to_bottom,#1f293708_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-                <div className="absolute top-0 right-1/4 -z-10 h-[500px] w-[800px] rounded-full bg-purple-500/5 blur-[140px]" />
-                <div className="absolute bottom-0 left-1/4 -z-10 h-[500px] w-[800px] rounded-full bg-cyan-500/5 blur-[140px]" />
-
-                {/* Global Routing Fabric Switcher Mapping */}
-                <Routes>
-                    <Route path="/" element={<CertificationsPage />} />
-                    <Route path="/certification/:id" element={<CertificateViewer />} />
-                </Routes>
-
-            </div>
-        </BrowserRouter>
-    );
+  return (
+    <main className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100 sm:py-24">
+      <Routes>
+        <Route index element={<CertificationsPage />} />
+        <Route path=":certificationId" element={<CertificationDetailsPage />} />
+      </Routes>
+    </main>
+  );
 }
