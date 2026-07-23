@@ -177,7 +177,6 @@ const loadProjects = (signal) =>
 
 const ProjectCard = memo(function ProjectCard({ project }) {
   const theme = THEMES.get(project.category) ?? DEFAULT_THEME;
-
   return (
     <article
       className={`flex h-full flex-col rounded-2xl border bg-slate-900/50 p-6 shadow-xl transition hover:-translate-y-1 hover:bg-slate-900 ${theme.border}`}
