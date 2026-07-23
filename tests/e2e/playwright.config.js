@@ -15,10 +15,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65_535) {
   );
 }
 const host = process.env.PLAYWRIGHT_HOST?.trim() || DEFAULT_HOST;
-
 const localBaseURL = `http://${host}:${port}`;
 const baseURL = process.env.PLAYWRIGHT_BASE_URL?.trim() || localBaseURL;
-
 const shouldStartLocalServer =
   !process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_SKIP_SERVER !== '1';
 
@@ -33,7 +31,6 @@ export default defineConfig({
   workers: process.env.PLAYWRIGHT_WORKERS || (isCI ? 2 : undefined),
 
   timeout: 45_000,
-
   expect: {
     timeout: 10_000,
     toHaveScreenshot: {
@@ -77,15 +74,12 @@ export default defineConfig({
     trace: isCI ? 'retain-on-failure' : 'on-first-retry',
     screenshot: 'only-on-failure',
     video: isCI ? 'retain-on-failure' : 'off',
-
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-
     locale: 'en-US',
     timezoneId: 'UTC',
     colorScheme: 'light',
     reducedMotion: 'reduce',
-
     ignoreHTTPSErrors: false,
     viewport: {
       width: 1440,
@@ -93,7 +87,6 @@ export default defineConfig({
     },
 
     serviceWorkers: 'block',
-
     contextOptions: {
       strictSelectors: true,
     },
