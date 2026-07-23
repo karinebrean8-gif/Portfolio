@@ -188,7 +188,6 @@ const ProjectCard = memo(function ProjectCard({ project }) {
         </span>
         <span className="text-xs text-slate-500">{project.status}</span>
       </div>
-
       <h2 className="mt-5 text-2xl font-black text-white">{project.title}</h2>
       <p className="mt-1 text-sm font-semibold text-emerald-400">
         {project.subtitle}
