@@ -1,359 +1,443 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+```jsx
+import { memo, useEffect, useMemo, useState } from 'react';
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useParams,
+} from 'react-router-dom';
 
-// ============================================================================
-// LAYER 1: IMMUTABLE ARCHITECTURAL CONFIGURATIONS & FALLBACK FABRICS
-// ============================================================================
+const FILTERS = {
+  ALL: 'ALL',
+  PLATFORM: 'PLATFORM',
+  DISTRIBUTED: 'DISTRIBUTED',
+  BACKEND: 'BACKEND',
+};
 
-const NETWORK_GATEWAY = Object.freeze({
-    BASE_URL: process.env.REACT_APP_API_GATEWAY_URL || "https://api.ultra-faang.internal/v1",
-    TIMEOUT: 8000,
-    METHODS: { GET: "GET", POST: "POST" }
-});
+const FILTER_OPTIONS = [
+  { label: 'All experience', value: FILTERS.ALL },
+  { label: 'Platform', value: FILTERS.PLATFORM },
+  { label: 'Distributed systems', value: FILTERS.DISTRIBUTED },
+  { label: 'Backend', value: FILTERS.BACKEND },
+];
 
-const TIMELINE_FILTERS = Object.freeze({
-    ALL: "ALL_SYSTEMS",
-    FAANG_CORE: "FAANG_CORE",
-    DISTRIBUTED_SYSTEMS: "DISTRIBUTED_SYSTEMS",
-    KERNEL_ARCHITECTURE: "KERNEL_ARCHITECTURE"
-});
+const EXPERIENCES = [
+  {
+    id: 'alexicorn-staff-engineer',
+    period: 'Jan 2016 — Present',
+    role: 'Staff Fullstack Engineer',
+    company: 'ALEXICORN',
+    location: 'London, United Kingdom',
+    category: FILTERS.PLATFORM,
+    summary:
+      'Designed and delivered multi-tenant web platforms, distributed backend services and cloud infrastructure supporting high-volume production workloads.',
+    metrics: [
+      { label: 'Concurrent users', value: '10K+' },
+      { label: 'Peak throughput', value: '50K RPM' },
+      { label: 'Infrastructure cost', value: '−40%' },
+      { label: 'Platform availability', value: '99.9%' },
+    ],
+    achievements: [
+      'Improved API performance by 60% through query optimization, Redis caching and asynchronous processing.',
+      'Designed Kubernetes-based deployment architecture across AWS EKS, RDS, Redis and object storage.',
+      'Reduced developer onboarding time by 90% through reusable tooling, documentation and automated environments.',
+      'Led architecture decisions across frontend, backend, persistence, observability and delivery systems.',
+    ],
+    stack: [
+      'React',
+      'Next.js',
+      'TypeScript',
+      'Django',
+      'FastAPI',
+      'Node.js',
+      'PostgreSQL',
+      'Redis',
+      'AWS',
+      'Kubernetes',
+      'Terraform',
+    ],
+  },
+  {
+    id: 'commerce-platform',
+    period: '2022 — 2025',
+    role: 'Platform Architecture Lead',
+    company: 'Commerce Platform Program',
+    location: 'Remote',
+    category: FILTERS.DISTRIBUTED,
+    summary:
+      'Built scalable commerce capabilities covering product discovery, checkout, payments, fulfillment and operational administration.',
+    metrics: [
+      { label: 'API latency', value: '−55%' },
+      { label: 'Deployment frequency', value: '3×' },
+      { label: 'Recovery time', value: '−70%' },
+      { label: 'Critical services', value: '12' },
+    ],
+    achievements: [
+      'Separated business capabilities into independently deployable services with stable contracts.',
+      'Introduced idempotent payment flows, durable event processing and failure recovery policies.',
+      'Created shared observability standards for structured logs, metrics, traces and alert ownership.',
+    ],
+    stack: [
+      'Django REST Framework',
+      'NestJS',
+      'Kafka',
+      'PostgreSQL',
+      'Elasticsearch',
+      'Docker',
+      'Kubernetes',
+    ],
+  },
+  {
+    id: 'developer-platform',
+    period: '2020 — 2023',
+    role: 'Senior Backend & Platform Engineer',
+    company: 'Developer Platform Initiative',
+    location: 'Remote',
+    category: FILTERS.BACKEND,
+    summary:
+      'Developed internal platform services that standardized authentication, authorization, application delivery and operational workflows.',
+    metrics: [
+      { label: 'Build duration', value: '−45%' },
+      { label: 'Manual operations', value: '−80%' },
+      { label: 'Service adoption', value: '25+' },
+      { label: 'Security controls', value: '15' },
+    ],
+    achievements: [
+      'Built reusable authentication and RBAC services for multiple product teams.',
+      'Automated CI/CD quality gates, security scans, artifact generation and environment promotion.',
+      'Standardized database migrations, API validation and failure-response contracts.',
+    ],
+    stack: [
+      'Python',
+      'Node.js',
+      'Prisma',
+      'PostgreSQL',
+      'GitHub Actions',
+      'Docker',
+      'Terraform',
+    ],
+  },
+];
 
-const FILTER_REGISTRY_LOOKUP = Object.freeze({
-    [TIMELINE_FILTERS.ALL]: "ALL ENGINE NODES",
-    [TIMELINE_FILTERS.FAANG_CORE]: "FAANG HYPERSCALE CORE",
-    [TIMELINE_FILTERS.DISTRIBUTED_SYSTEMS]: "DISTRIBUTED CLUSTERS",
-    [TIMELINE_FILTERS.KERNEL_ARCHITECTURE]: "KERNEL & OS ARCHITECTURE"
-});
-
-const STATIC_FALLBACK_EXPERIENCES = Object.freeze([
+const CATEGORY_THEME = new Map([
+  [
+    FILTERS.PLATFORM,
     {
-        id: "EXP-L15-01",
-        epoch: "2022 - PRESENT",
-        role: "Fellow & Principal System Architect",
-        organization: "Google Cloud / Alphabet Core",
-        tag: TIMELINE_FILTERS.FAANG_CORE,
-        summary: "Spearheaded the design and global deployment of Next-Gen distributed consensus engines, processing multi-exabyte compute fabrics.",
-        metrics: [
-            { label: "P99.99 Latency Reduction", value: "42%", dynamicImpact: "Saves $40M annually in infrastructure allocation" },
-            { label: "Throughput Scalability Ratio", value: "18.5x", dynamicImpact: "Handled 4.2 Billion active tasks simultaneously" }
-        ],
-        techStack: ["Rust", "Go Core", "Kubernetes Mesh", "eBPF Telemetry", "C++26"],
-        achievements: [
-            "Architected the low-latency networking subsystem utilized by global Edge locations.",
-            "Redesigned distributed sharding topologies to eliminate database lock contentions."
-        ]
+      border: 'border-cyan-400/30',
+      badge: 'border-cyan-400/20 bg-cyan-400/10 text-cyan-300',
     },
+  ],
+  [
+    FILTERS.DISTRIBUTED,
     {
-        id: "EXP-L15-02",
-        epoch: "2015 - 2022",
-        role: "Distinguished Software Engineer (Kernel Ingress)",
-        organization: "Netflix Streaming Infrastructure",
-        tag: TIMELINE_FILTERS.DISTRIBUTED_SYSTEMS,
-        summary: "Re-engineered global content delivery networks (Open Connect) and optimized Linux kernel socket layers for high-throughput video pipelines.",
-        metrics: [
-            { label: "Global Bandwidth Efficiency", value: "+34%", dynamicImpact: "Optimized streaming paths across 190 countries" },
-            { label: "Kernel Context Switching Drops", value: "-60%", dynamicImpact: "Freed massive thread availability across hardware clusters" }
-        ],
-        techStack: ["Linux Kernel C", "FreeBSD Network Subsystem", "Assembly x86_64", "Python Core Engines"],
-        achievements: [
-            "Introduced zero-copy memory routing architectures directly into production hardware arrays.",
-            "Authored localized internal memory managers reducing memory thrashing errors to near-zero."
-        ]
-    }
+      border: 'border-purple-400/30',
+      badge: 'border-purple-400/20 bg-purple-400/10 text-purple-300',
+    },
+  ],
+  [
+    FILTERS.BACKEND,
+    {
+      border: 'border-emerald-400/30',
+      badge: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+    },
+  ],
 ]);
 
-// ============================================================================
-// LAYER 2: INFRASTRUCTURE INGRESS MESH - experienceAPI.js
-// ============================================================================
-
-const executeAsyncFetch = async (endpoint, options = {}) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), NETWORK_GATEWAY.TIMEOUT);
-
-    const defaultHeaders = {
-        "Content-Type": "application/json",
-        "X-Client-Tier": "L15-Principal-Architect-Matrix",
-        "Authorization": `Bearer ${process.env.REACT_APP_SECURE_INGRESS_TOKEN || "DEFAULT_FABRIC_TOKEN"}`
-    };
-
-    try {
-        const response = await fetch(`${NETWORK_GATEWAY.BASE_URL}${endpoint}`, {
-            ...options,
-            headers: { ...defaultHeaders, ...options.headers },
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-        if (!response.ok) throw new Error(`Gateway returned an error status code: [HTTP ${response.status}]`);
-
-        const operationalPayload = await response.json();
-        return operationalPayload?.data || [];
-    } catch (error) {
-        clearTimeout(timeoutId);
-        console.error(`%c[NETWORK GATEWAY FAULT INTERCEPT]: ${error.message}`, "color: #ef4444; font-weight: bold; font-family: monospace;");
-        // Graceful degrading fallback using Native JavaScript Promises
-        return Promise.resolve([...STATIC_FALLBACK_EXPERIENCES]);
-    }
+const DEFAULT_THEME = {
+  border: 'border-slate-700',
+  badge: 'border-slate-700 bg-slate-800 text-slate-300',
 };
 
-export const experienceAPI = {
-    fetchExperienceMatrix: () => executeAsyncFetch("/portfolio/experiences", { method: NETWORK_GATEWAY.METHODS.GET }),
-    triggerRemoteTelemetryFlush: (experienceId) => executeAsyncFetch(`/portfolio/telemetry/${experienceId}`, { method: NETWORK_GATEWAY.METHODS.POST })
-};
-
-// ============================================================================
-// LAYER 3: CUSTOM STATE REACTION HOOKS - useExperience.js & useExperienceFilter.js
-// ============================================================================
-
-export function useExperience() {
-    const [experienceState, setExperienceState] = useState({
-        dataStream: [],
-        loading: true,
-        errorSignal: null
-    });
-
-    useEffect(() => {
-        let activeThread = true;
-
-        experienceAPI.fetchExperienceMatrix()
-            .then((payload) => {
-                if (activeThread) {
-                    setExperienceState({
-                        dataStream: payload,
-                        loading: false,
-                        errorSignal: payload.length === 0 ? "Empty network data packet returned." : null
-                    });
-                }
-            })
-            .catch((err) => {
-                if (activeThread) {
-                    setExperienceState({
-                        dataStream: [...STATIC_FALLBACK_EXPERIENCES],
-                        loading: false,
-                        errorSignal: `Safe structural fallback applied. Reason: ${err.message}`
-                    });
-                }
-            });
-
-        return () => { activeThread = false; };
-    }, []);
-
-    return experienceState;
-}
-
-export function useExperienceFilter(initialDataStream) {
-    const [activeFilterTag, setActiveFilterTag] = useState(TIMELINE_FILTERS.ALL);
-
-    const computedFilteredMatrix = useMemo(() => {
-        if (!initialDataStream || !Array.isArray(initialDataStream)) return [];
-        if (activeFilterTag === TIMELINE_FILTERS.ALL) {
-            return [...initialDataStream].sort((a, b) => b.epoch.localeCompare(a.epoch));
-        }
-        return initialDataStream.filter(node => node.tag === activeFilterTag);
-    }, [initialDataStream, activeFilterTag]);
-
-    return { activeFilterTag, setActiveFilterTag, computedFilteredMatrix };
-}
-
-// ============================================================================
-// LAYER 4: HIGHER-ORDER VDOM LEAF COMPONENTS (Memoized Pure UI Modules)
-// ============================================================================
-
-// --- TechUsed.jsx ---
-const TechUsed = React.memo(({ stackData }) => (
-    <div className="flex flex-wrap gap-2 mt-5 font-mono">
-        {stackData.map((tech, index) => (
-            <span
-                key={index}
-                className="text-[10px] font-bold px-2.5 py-1 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-900/40 hover:border-cyan-500/30 transition-all duration-200 cursor-default"
-            >
-                {tech}
-            </span>
-        ))}
-    </div>
-));
-TechUsed.displayName = "TechUsed";
-
-// --- ImpactsMetrics.jsx ---
-const ImpactsMetrics = React.memo(({ metricsData }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 bg-slate-950/60 p-4 rounded-xl border border-slate-900/80">
-        {metricsData.map((metric, index) => (
-            <div key={index} className="flex flex-col border-l-2 border-cyan-500/40 pl-3">
-                <span className="text-2xl font-black tracking-tight font-mono text-slate-100">
-                    {metric.value}
-                </span>
-                <span className="text-[11px] font-mono text-cyan-400 font-semibold tracking-wide uppercase mt-0.5">
-                    {metric.label}
-                </span>
-                <span className="text-xs text-slate-400 mt-1 leading-normal">
-                    {metric.dynamicImpact}
-                </span>
-            </div>
-        ))}
-    </div>
-));
-ImpactsMetrics.displayName = "ImpactsMetrics";
-
-// --- AchievementList.jsx ---
-const AchievementList = React.memo(({ highlights }) => (
-    <div className="mt-5 space-y-2.5 font-sans">
-        <h4 className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            KEY CORE ACCOMPLISHMENTS
-        </h4>
-        <ul className="space-y-2 text-sm text-slate-300">
-            {highlights.map((bullet, index) => (
-                <li key={index} className="flex items-start gap-2.5 leading-relaxed">
-                    <span className="text-cyan-500 font-mono select-none mt-0.5">▸</span>
-                    <span>{bullet}</span>
-                </li>
-            ))}
-        </ul>
-    </div>
-));
-AchievementList.displayName = "AchievementList";
-
-// --- RolesDetails.jsx ---
-const RolesDetails = React.memo(({ title, org, epoch, overview }) => (
-    <div className="space-y-2 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-900/60 pb-3">
-            <div>
-                <h3 className="text-2xl font-black text-slate-100 tracking-tight hover:text-cyan-400 transition-colors duration-200">
-                    {title}
-                </h3>
-                <p className="text-sm font-mono text-slate-400 mt-0.5 font-medium">{org}</p>
-            </div>
-            <span className="px-3 py-1 bg-slate-950 text-cyan-400 border border-slate-800 rounded font-mono text-xs font-bold self-start md:self-auto shadow-inner">
-                {epoch}
-            </span>
-        </div>
-        <p className="text-sm text-slate-400 leading-relaxed font-sans pt-2">{overview}</p>
-    </div>
-));
-RolesDetails.displayName = "RolesDetails";
-
-// --- ExperienceCard.jsx ---
-const ExperienceCard = React.memo(({ dataNode }) => {
-    const handleTelemetryClick = useCallback(async () => {
-        console.log(`%c[TELEMETRY INITIATED]: Node ID - ${dataNode.id}`, "color: #a855f7; font-weight: bold;");
-        await experienceAPI.triggerRemoteTelemetryFlush(dataNode.id);
-    }, [dataNode.id]);
-
-    return (
-        <div className="relative group bg-slate-900/20 border border-slate-900 hover:border-cyan-500/20 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1 shadow-[0_0_30px_rgba(0,0,0,0.2)]">
-            {/* Structural Accent lines */}
-            <div className="absolute top-0 left-0 w-8 h-[1px] bg-cyan-500/40 group-hover:w-16 transition-all duration-300" />
-            <div className="absolute top-0 left-0 w-[1px] h-8 bg-cyan-500/40 group-hover:h-16 transition-all duration-300" />
-
-            <RolesDetails
-                title={dataNode.role}
-                org={dataNode.organization}
-                epoch={dataNode.epoch}
-                overview={dataNode.summary}
-            />
-
-            <ImpactsMetrics metricsData={dataNode.metrics} />
-
-            <AchievementList highlights={dataNode.achievements} />
-
-            <TechUsed stackData={dataNode.techStack} />
-
-            <div className="mt-6 pt-4 border-t border-slate-950 flex justify-end">
-                <button
-                    onClick={handleTelemetryClick}
-                    className="text-[10px] font-mono tracking-wider px-3 py-1.5 rounded border border-purple-500/20 text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40 transition-all cursor-pointer"
-                >
-                    ⚙ INTERCEPT_SYSTEM_TELEMETRY
-                </button>
-            </div>
-        </div>
+const loadExperiences = (signal) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(EXPERIENCES), 250);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException('Request aborted', 'AbortError'));
+      },
+      { once: true },
     );
+  });
+
+const MetricGrid = memo(function MetricGrid({ metrics }) {
+  return (
+    <dl className="mt-6 grid grid-cols-2 gap-3">
+      {metrics.map(({ label, value }) => (
+        <div
+          key={label}
+          className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
+        >
+          <dd className="text-xl font-black text-white">{value}</dd>
+          <dt className="mt-1 text-xs text-slate-500">{label}</dt>
+        </div>
+      ))}
+    </dl>
+  );
 });
-ExperienceCard.displayName = "ExperienceCard";
 
-// --- ExperienceTimeline.jsx ---
-const ExperienceTimeline = React.memo(({ dataset }) => (
-    <div className="grid grid-cols-1 gap-8 mt-10">
-        {dataset.map((experience) => (
-            <ExperienceCard key={experience.id} dataNode={experience} />
+const ExperienceCard = memo(function ExperienceCard({ experience }) {
+  const theme = CATEGORY_THEME.get(experience.category) ?? DEFAULT_THEME;
+  return (
+    <article
+      className={`flex h-full flex-col rounded-2xl border bg-slate-900/50 p-6 shadow-xl transition hover:-translate-y-1 hover:bg-slate-900 ${theme.border}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${theme.badge}`}>
+          {experience.category}
+        </span>
+        <span className="text-xs text-slate-500">{experience.period}</span>
+      </div>
+
+      <h2 className="mt-5 text-2xl font-black text-white">{experience.role}</h2>
+      <p className="mt-1 font-semibold text-emerald-400">
+        {experience.company}
+      </p>
+      <p className="mt-1 text-xs text-slate-500">{experience.location}</p>
+
+      <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-400">
+        {experience.summary}
+      </p>
+      <MetricGrid metrics={experience.metrics.slice(0, 4)} />
+      <ul className="mt-5 flex flex-wrap gap-2">
+        {experience.stack.slice(0, 6).map((technology) => (
+          <li
+            key={technology}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-300"
+          >
+            {technology}
+          </li>
         ))}
-    </div>
-));
-ExperienceTimeline.displayName = "ExperienceTimeline";
+      </ul>
+      <Link
+        to={`/experience/${experience.id}`}
+        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+      >
+        View experience
+      </Link>
+    </article>
+  );
+});
 
-// ============================================================================
-// LAYER 5: DYNAMIC ORCHESTRATION CONTAINER - ExperiencePage.jsx (Main Export)
-// ============================================================================
+function ExperienceList() {
+  const [records, setRecords] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState(FILTERS.ALL);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadExperiences(controller.signal)
+      .then((data) => {
+        setRecords(data);
+        setStatus('success');
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') setStatus('error');
+      });
+    return () => controller.abort();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return records.filter((experience) => {
+      const matchesFilter =
+        filter === FILTERS.ALL || experience.category === filter;
+      const searchable = [
+        experience.role,
+        experience.company,
+        experience.location,
+        experience.summary,
+        ...experience.achievements,
+        ...experience.stack,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return matchesFilter && searchable.includes(search);
+    });
+  }, [filter, query, records]);
+
+  const stats = useMemo(
+    () => [
+      { label: 'Experience', value: '9+ years' },
+      { label: 'Roles', value: records.length },
+      {
+        label: 'Technologies',
+        value: new Set(records.flatMap(({ stack }) => stack)).size,
+      },
+      {
+        label: 'Achievements',
+        value: records.reduce(
+          (total, item) => total + item.achievements.length,
+          0,
+        ),
+      },
+    ],
+    [records],
+  );
+  if (status === 'loading') {
+    return <p className="py-24 text-center text-slate-400">Loading experience…</p>;
+  }
+  if (status === 'error') {
+    return (
+      <p className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-8 text-center text-rose-300">
+        Experience data could not be loaded.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <header>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">
+          Professional experience
+        </p>
+        <h1 className="mt-4 text-4xl font-black tracking-tight md:text-6xl">
+          Engineering Experience
+        </h1>
+        <p className="mt-5 max-w-3xl leading-7 text-slate-400">
+          Platform architecture, distributed systems, product engineering and
+          measurable production outcomes.
+        </p>
+        <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {stats.map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+            >
+              <p className="text-xs uppercase tracking-wider text-slate-500">
+                {label}
+              </p>
+              <p className="mt-2 text-2xl font-black text-white">{value}</p>
+            </div>
+          ))}
+        </div>
+      </header>
+      <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <input
+          type="search"
+          value={query}
+          onChange={({ target }) => setQuery(target.value)}
+          placeholder="Search roles, systems, achievements or technologies"
+          className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
+        />
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {FILTER_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setFilter(option.value)}
+              className={`rounded-lg border px-4 py-2 text-xs font-semibold transition ${
+                filter === option.value
+                  ? 'border-emerald-400 bg-emerald-400 text-slate-950'
+                  : 'border-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </section>
+      <p className="mt-6 text-sm text-slate-400">
+        Showing <strong className="text-white">{filtered.length}</strong> of{' '}
+        {records.length} roles
+      </p>
+      {filtered.length ? (
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+          {filtered.map((experience) => (
+            <ExperienceCard key={experience.id} experience={experience} />
+          ))}
+        </section>
+      ) : (
+        <p className="mt-8 rounded-xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+          No matching experience found.
+        </p>
+      )}
+    </>
+  );
+}
+
+function ExperienceDetails() {
+  const { id } = useParams();
+  const experience = EXPERIENCES.find((item) => item.id === id);
+  if (!experience) return <Navigate to="/experience" replace />;
+  const theme = CATEGORY_THEME.get(experience.category) ?? DEFAULT_THEME;
+
+  return (
+    <article
+      className={`mx-auto max-w-4xl rounded-2xl border bg-slate-900/60 p-6 shadow-2xl md:p-10 ${theme.border}`}
+    >
+      <Link
+        to="/experience"
+        className="text-sm font-semibold text-emerald-400 hover:text-emerald-300"
+      >
+        ← Back to experience
+      </Link>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${theme.badge}`}>
+          {experience.category}
+        </span>
+        <span className="text-sm text-slate-500">{experience.period}</span>
+      </div>
+      <h1 className="mt-5 text-3xl font-black text-white md:text-5xl">
+        {experience.role}
+      </h1>
+      <p className="mt-2 text-xl font-semibold text-emerald-400">
+        {experience.company}
+      </p>
+      <p className="mt-1 text-sm text-slate-500">{experience.location}</p>
+      <p className="mt-6 max-w-3xl leading-7 text-slate-400">
+        {experience.summary}
+      </p>
+
+      <MetricGrid metrics={experience.metrics} />
+      <section className="mt-8">
+        <h2 className="text-lg font-bold text-white">Key achievements</h2>
+        <ul className="mt-4 space-y-3">
+          {experience.achievements.map((achievement) => (
+            <li
+              key={achievement}
+              className="flex gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm leading-6 text-slate-400"
+            >
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+              {achievement}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="mt-8">
+        <h2 className="text-lg font-bold text-white">Technology stack</h2>
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {experience.stack.map((technology) => (
+            <li
+              key={technology}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+            >
+              {technology}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </article>
+  );
+}
 
 export default function ExperienceDashboard() {
-    const { dataStream, loading, errorSignal } = useExperience();
-    const { activeFilterTag, setActiveFilterTag, computedFilteredMatrix } = useExperienceFilter(dataStream);
-
-    return (
-        <div className="min-h-screen w-full bg-[#020617] text-slate-100 px-6 sm:px-12 py-16 font-sans selection:bg-cyan-500/20 selection:text-cyan-300 antialiased relative overflow-hidden">
-
-            {/* Background Matrix Decors */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a50_1px,transparent_1px),linear-gradient(to_bottom,#0f172a50_1px,transparent_1px)] bg-[size:5rem_5rem]" />
-            <div className="absolute top-0 left-1/4 -z-10 h-[500px] w-[800px] rounded-full bg-cyan-500/5 blur-[140px]" />
-            <div className="absolute bottom-0 right-1/4 -z-10 h-[500px] w-[800px] rounded-full bg-purple-500/5 blur-[140px]" />
-
-            {/* Network Anomaly Interception Alert */}
-            {errorSignal && (
-                <div className="max-w-5xl mx-auto mb-8 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 font-mono text-xs text-amber-400 relative z-10 shadow-lg">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span>[PIPELINE TRACE NOTICE]: {errorSignal} Engine mounted static cache profiles safely.</span>
-                </div>
-            )}
-
-            {/* Header Panel */}
-            <header className="max-w-5xl mx-auto mb-16 border-b border-slate-900 pb-10 flex flex-col gap-8 relative z-10">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-                        <p className="text-xs font-mono tracking-widest text-cyan-400 uppercase">L15 Principal Level Operations</p>
-                    </div>
-                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-100">
-                        Engineering Milestones Matrix
-                    </h1>
-                    <p className="text-sm font-mono text-slate-500 mt-2 max-w-2xl leading-relaxed">
-                        A real-time telemetry log detailing 50+ years of cumulative infrastructure scaling, distributed systems architecture, and core system optimizations.
-                    </p>
-                </div>
-
-                {/* Filter Navigation Control Deck */}
-                <div className="flex flex-wrap gap-2.5 font-mono">
-                    {Object.keys(FILTER_REGISTRY_LOOKUP).map((key) => (
-                        <button
-                            key={key}
-                            onClick={() => setActiveFilterTag(key)}
-                            className={`px-4 py-2 rounded text-xs font-bold transition-all duration-200 border cursor-pointer ${activeFilterTag === key
-                                    ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
-                                    : "bg-slate-950/60 text-slate-500 border-slate-900 hover:border-slate-800 hover:text-slate-300"
-                                }`}
-                        >
-                            {FILTER_REGISTRY_LOOKUP[key]}
-                        </button>
-                    ))}
-                </div>
-            </header>
-
-            {/* Main Workspace Frame */}
-            <main className="max-w-5xl mx-auto relative z-10">
-                {loading ? (
-                    <div className="text-center py-40 font-mono text-xs text-slate-500 tracking-widest animate-pulse">
-                        CONNECTING_TO_GLOBAL_INGRESS_FABRIC...
-                    </div>
-                ) : (
-                    <>
-                        {computedFilteredMatrix.length === 0 ? (
-                            <div className="text-center py-24 bg-slate-950/40 rounded-2xl border border-slate-900 font-mono text-xs text-slate-500">
-                                NO EXECUTIONS FOUND MATCHING THE ACTIVE NODE FILTER.
-                            </div>
-                        ) : (
-                            <ExperienceTimeline dataset={computedFilteredMatrix} />
-                        )}
-                    </>
-                )}
-            </main>
+  return (
+    <BrowserRouter>
+      <main className="min-h-screen bg-slate-950 px-5 py-14 text-slate-100 md:px-10">
+        <div className="mx-auto max-w-7xl">
+          <Routes>
+            <Route path="/experience" element={<ExperienceList />} />
+            <Route path="/experience/:id" element={<ExperienceDetails />} />
+            <Route path="*" element={<Navigate to="/experience" replace />} />
+          </Routes>
         </div>
-    );
+      </main>
+    </BrowserRouter>
+  );
 }
+```
