@@ -1,185 +1,359 @@
-/**
- * ==============================================================================
- * TITLE:       AuthenticationMocks.ts (Enterprise E2E Authentication Engine)
- * ARCHITECT:   L15 Principle Ultra-FAANG Systems Architect
- * EXPERIENCE:  50+ Years Legacy Systems & Hyper-scale Infrastructure Philosophy
- * COMPLIANCE:  TypeScript Strict Mode, Hexagonal Domain Testing, Clean Architecture
- * ==============================================================================
- * This file is an executable, stateful mock engine that completely isolates 
- * the E2E boundary from downstream auth providers (Auth0, Firebase, Custom OAuth).
- */
+import type { Page, Request, Route } from '@playwright/test';
+export type UserRole = 'admin' | 'staff' | 'user';
 
-import { Buffer } from 'buffer';
-
-// ==============================================================================
-// 1. DOMAIN INTERFACES & STRUCTURAL CONTRACTS
-// ==============================================================================
-
-export type SecurityRole = 'ANONYMOUS' | 'GUEST_DEVELOPER' | 'ADMIN_CORE' | 'SYSTEM_AUTOMATION';
-
-export interface UserSessionProfile {
-  id: string;
-  email: string;
-  fullName: string;
-  role: SecurityRole;
-  permissions: string[];
-  tenantId: string;
+export interface AuthUser {
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly role: UserRole;
+  readonly permissions: readonly string[];
 }
-
-export interface MockTokenPayload {
-  iss: string;
-  sub: string;
-  aud: string;
-  exp: number;
-  nbf: number;
-  iat: number;
-  jti: string;
-  profile: UserSessionProfile;
-  mfaVerified: boolean;
+export interface AuthSession {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly expiresAt: string;
+  readonly user: AuthUser;
 }
-
-export interface NetworkInterceptMockResponse {
-  status: number;
-  headers: Record<string, string>;
-  body: string;
+export interface AuthMockOptions {
+  readonly loginPath?: string;
+  readonly logoutPath?: string;
+  readonly sessionPath?: string;
+  readonly refreshPath?: string;
+  readonly delayMs?: number;
+  readonly user?: Partial<AuthUser>;
+  readonly session?: Partial<AuthSession>;
 }
-
-// ==============================================================================
-// 2. CRYPTOGRAPHIC TOKEN GENERATOR ADAPTER (PURE IN-MEMORY ENGINE)
-// ==============================================================================
-
-export class CryptographicMockTokenEngine {
-  private static readonly ALGORITHM_HEADER = Buffer.from(
-    JSON.stringify({ alg: "HS256", typ: "JWT" })
-  ).toString('base64url');
-
-  /**
-   * Generates a structural base64url signed JWT-mock signature without external server IO.
-   * Maintains perfect format compliance to satisfy frontend routing guards and interceptors.
-   */
-  public static mintEphemeralToken(profile: UserSessionProfile, lifespanSeconds = 900, overrides: Partial<MockTokenPayload> = {}): string {
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    const payload: MockTokenPayload = {
-      iss: "https://auth.ultra-faang-portfolio.internal",
-      sub: profile.id,
-      aud: "https://api.ultra-faang-portfolio.internal",
-      iat: currentTime,
-      nbf: currentTime,
-      exp: currentTime + lifespanSeconds,
-      jti: `mock_jti_${Buffer.from(Math.random().toString()).toString('hex')}`,
-      mfaVerified: true,
-      profile,
-      ...overrides
-    };
-
-    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-    const structuralSignature = Buffer.from(`${this.ALGORITHM_HEADER}.${encodedPayload}.MOCK_SIGNATURE_VERIFIED`).toString('base64url');
-
-    return `${this.ALGORITHM_HEADER}.${encodedPayload}.${structuralSignature}`;
-  }
+export interface MockRequestRecord {
+  readonly method: string;
+  readonly url: string;
+  readonly pathname: string;
+  readonly body: unknown;
+  readonly timestamp: string;
 }
+export interface AuthenticationMockController {
+  readonly requests: readonly MockRequestRecord[];
+  getLastRequest(): MockRequestRecord | undefined;
+  resetRequests(): void;
+  dispose(): Promise<void>;
+}
+export interface MockLoginFailure {
+  readonly status?: 400 | 401 | 403 | 422 | 429 | 500 | 503;
+  readonly code?: string;
+  readonly message?: string;
+  readonly retryAfterSeconds?: number;
+}
+type RouteHandler = (route: Route) => Promise<void>;
+type RegisteredRoute = Readonly<{ url: string; handler: RouteHandler }>;
+const PATHS = Object.freeze({
+  login: '/api/auth/login',
+  logout: '/api/auth/logout',
+  session: '/api/auth/session',
+  refresh: '/api/auth/refresh',
+});
 
-// ==============================================================================
-// 3. SEPARATION OF CONCERNS: SIMULATED IDENTITY STATE PRESETS
-// ==============================================================================
+const DEFAULT_USER: AuthUser = Object.freeze({
+  id: 'e2e-user-001',
+  email: 'staff.engineer@example.test',
+  name: 'E2E Staff Engineer',
+  role: 'staff',
+  permissions: Object.freeze(['portfolio:read', 'portfolio:write', 'profile:read']),
+});
 
-export const MockIdentityRegistry = {
-  /**
-   * Complete Super-Admin access context for destructive E2E management test suites.
-   */
-  getAdminUser: (): UserSessionProfile => ({
-    id: "usr_l15_god_mode_001",
-    email: "architect.core@faang.internal",
-    fullName: "L15 Principle Architect",
-    role: "ADMIN_CORE",
-    permissions: ["system:write", "analytics:read", "database:purge", "auth:override"],
-    tenantId: "tenant_primary_global_01"
-  }),
-
-  /**
-   * Standard public-tier user testing profile.
-   */
-  getGuestDeveloper: (): UserSessionProfile => ({
-    id: "usr_guest_dev_777",
-    email: "junior.dev@github.com",
-    fullName: "Anonymous Tech Recruiter",
-    role: "GUEST_DEVELOPER",
-    permissions: ["portfolio:read", "contact:write"],
-    tenantId: "tenant_public_sandbox"
-  })
+const HEADERS = Object.freeze({
+  'access-control-allow-credentials': 'true',
+  'access-control-allow-headers': 'content-type, authorization',
+  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  'access-control-allow-origin': '*',
+  'cache-control': 'no-store',
+  'content-type': 'application/json; charset=utf-8',
+});
+const normalizePath = (value: string): string => {
+  const path = value.trim();
+  if (!path) throw new Error('Authentication mock path cannot be empty.');
+  return path.startsWith('/') ? path : `/${path}`;
 };
 
-// ==============================================================================
-// 4. THE CORE MOCK ORCHESTRATOR (THE CONTROL INTERFACE)
-// ==============================================================================
+const matchesPath = (request: Request, path: string): boolean =>
+  new URL(request.url()).pathname === path;
+const createToken = (kind: 'access' | 'refresh'): string =>
+  `e2e-${kind}-${crypto.randomUUID()}`;
+const createUser = (overrides: Partial<AuthUser> = {}): AuthUser => ({
+  ...DEFAULT_USER,
+  ...overrides,
+  permissions: overrides.permissions ?? DEFAULT_USER.permissions,
+});
 
-export class AuthenticationMockEngine {
-  
-  /**
-   * Generates standard payload blocks satisfying network intercepts for automated test contexts.
-   */
-  public static createMockAuthSuccessState(role: SecurityRole = 'ADMIN_CORE'): NetworkInterceptMockResponse {
-    const profile = role === 'ADMIN_CORE' 
-      ? MockIdentityRegistry.getAdminUser() 
-      : MockIdentityRegistry.getGuestDeveloper();
-      
-    const accessToken = CryptographicMockTokenEngine.mintEphemeralToken(profile);
-    const refreshToken = `mock_ref_token_${Buffer.from(profile.id).toString('base64url')}`;
+const createSession = (
+  user: AuthUser,
+  overrides: Partial<AuthSession> = {},
+): AuthSession => ({
+  accessToken: createToken('access'),
+  refreshToken: createToken('refresh'),
+  expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+  user,
+  ...overrides,
+  user: overrides.user ?? user,
+});
 
-    return {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Simulation-Engine": "Ultra-FAANG-L15-MockCore"
-      },
-      body: JSON.stringify({
-        success: true,
-        accessToken,
-        refreshToken,
-        expiresIn: 900,
-        tokenType: "Bearer"
-      })
-    };
+const wait = async (delayMs: number): Promise<void> => {
+  if (!Number.isFinite(delayMs) || delayMs < 0) {
+    throw new Error(`Invalid authentication mock delay: ${delayMs}`);
   }
+  if (delayMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+};
 
-  /**
-   * Simulates explicit authentication lifecycle disruptions (Expired sessions, security challenges).
-   */
-  public static createMockAuthFailureState(reason: 'TOKEN_EXPIRED' | 'BAD_CREDENTIALS' | 'MFA_REQUIRED'): NetworkInterceptMockResponse {
-    switch (reason) {
-      case 'TOKEN_EXPIRED':
-        return {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: "ERR_AUTH_TOKEN_EXPIRED", message: "Cryptographic lease expired." })
-        };
-      case 'MFA_REQUIRED':
-        return {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code: "ERR_MFA_STEP_UP_REQUIRED",
-            message: "Multi-Factor validation vector unverified.",
-            mfaTicket: "mfa_ticket_challenge_validation_991823"
-          })
-        };
-      case 'BAD_CREDENTIALS':
-      default:
-        return {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: "ERR_INVALID_CREDENTIALS", message: "Handshake identity mismatch." })
-        };
+const parseBody = (request: Request): unknown => {
+  const body = request.postData();
+  if (!body) return undefined;
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return body;
+  }
+};
+const capture = (
+  request: Request,
+  records: MockRequestRecord[],
+): void => {
+  records.push({
+    method: request.method(),
+    url: request.url(),
+    pathname: new URL(request.url()).pathname,
+    body: parseBody(request),
+    timestamp: new Date().toISOString(),
+  });
+};
+const fulfillJson = async (
+  route: Route,
+  status: number,
+  body?: unknown,
+  headers: Readonly<Record<string, string>> = {},
+): Promise<void> => {
+  await route.fulfill({
+    status,
+    headers: { ...HEADERS, ...headers },
+    body: body === undefined ? '' : JSON.stringify(body),
+  });
+};
+
+const handlePreflight = async (route: Route): Promise<boolean> => {
+  if (route.request().method() !== 'OPTIONS') return false;
+  await fulfillJson(route, 204);
+  return true;
+};
+const validateLoginBody = (value: unknown): void => {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Login request body must be a JSON object.');
+  }
+  const { email, password } = value as Record<string, unknown>;
+  if (typeof email !== 'string' || !email.trim()) {
+    throw new Error('Login request must contain a valid email.');
+  }
+  if (typeof password !== 'string' || !password) {
+    throw new Error('Login request must contain a password.');
+  }
+};
+const methodNotAllowed = async (
+  route: Route,
+  method: 'GET' | 'POST',
+  action: string,
+): Promise<void> => {
+  await fulfillJson(route, 405, {
+    error: {
+      code: 'METHOD_NOT_ALLOWED',
+      message: `Only ${method} is allowed for ${action}.`,
+    },
+  });
+};
+
+const createController = (
+  page: Page,
+  records: MockRequestRecord[],
+  routes: readonly RegisteredRoute[],
+): AuthenticationMockController => ({
+  get requests() {
+    return records;
+  },
+  getLastRequest: () => records.at(-1),
+  resetRequests: () => {
+    records.length = 0;
+  },
+  dispose: async () => {
+    await Promise.all(routes.map(({ url, handler }) => page.unroute(url, handler)));
+  },
+});
+
+const registerRoutes = async (
+  page: Page,
+  routes: readonly RegisteredRoute[],
+): Promise<void> => {
+  await Promise.all(routes.map(({ url, handler }) => page.route(url, handler)));
+};
+
+export async function mockAuthenticatedSession(
+  page: Page,
+  options: AuthMockOptions = {},
+): Promise<AuthenticationMockController> {
+  const paths = {
+    login: normalizePath(options.loginPath ?? PATHS.login),
+    logout: normalizePath(options.logoutPath ?? PATHS.logout),
+    session: normalizePath(options.sessionPath ?? PATHS.session),
+    refresh: normalizePath(options.refreshPath ?? PATHS.refresh),
+  };
+  const user = createUser(options.user);
+  const records: MockRequestRecord[] = [];
+  const delayMs = options.delayMs ?? 0;
+  let session: AuthSession | null = createSession(user, options.session);
+  const login: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, paths.login)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'POST') return methodNotAllowed(route, 'POST', 'login');
+    await wait(delayMs);
+    try {
+      validateLoginBody(parseBody(request));
+    } catch (error) {
+      return fulfillJson(route, 422, {
+        error: {
+          code: 'INVALID_LOGIN_PAYLOAD',
+          message: error instanceof Error ? error.message : 'Invalid login request payload.',
+        },
+      });
     }
-  }
+    session = createSession(user, options.session);
+    await fulfillJson(route, 200, { data: session });
+  };
 
-  /**
-   * Synthesizes an expired authentication token context to evaluate fallback auto-refresh loops.
-   */
-  public static createExpiredTokenState(): string {
-    const baselineProfile = MockIdentityRegistry.getGuestDeveloper();
-    // Setting back-dated expiration metrics to force target system triggers
-    return CryptographicMockTokenEngine.mintEphemeralToken(baselineProfile, -3600); 
-  }
+  const currentSession: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, paths.session)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'GET') {
+      return methodNotAllowed(route, 'GET', 'session retrieval');
+    }
+    await wait(delayMs);
+    if (!session) {
+      return fulfillJson(route, 401, {
+        error: {
+          code: 'UNAUTHENTICATED',
+          message: 'No active authentication session exists.',
+        },
+      });
+    }
+    await fulfillJson(route, 200, { data: session });
+  };
+
+  const refresh: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, paths.refresh)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'POST') {
+      return methodNotAllowed(route, 'POST', 'token refresh');
+    }
+    await wait(delayMs);
+    if (!session) {
+      return fulfillJson(route, 401, {
+        error: {
+          code: 'REFRESH_SESSION_MISSING',
+          message: 'The authentication session cannot be refreshed.',
+        },
+      });
+    }
+    session = {
+      ...session,
+      accessToken: createToken('access'),
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+    await fulfillJson(route, 200, { data: session });
+  };
+
+  const logout: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, paths.logout)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'POST') return methodNotAllowed(route, 'POST', 'logout');
+    await wait(delayMs);
+    session = null;
+    await fulfillJson(route, 204);
+  };
+
+  const routes: readonly RegisteredRoute[] = [
+    { url: `**${paths.login}`, handler: login },
+    { url: `**${paths.session}`, handler: currentSession },
+    { url: `**${paths.refresh}`, handler: refresh },
+    { url: `**${paths.logout}`, handler: logout },
+  ];
+
+  await registerRoutes(page, routes);
+  return createController(page, records, routes);
+}
+
+export async function mockLoginFailure(
+  page: Page,
+  failure: MockLoginFailure = {},
+  options: Pick<AuthMockOptions, 'loginPath' | 'delayMs'> = {},
+): Promise<AuthenticationMockController> {
+  const path = normalizePath(options.loginPath ?? PATHS.login);
+  const records: MockRequestRecord[] = [];
+  const status = failure.status ?? 401;
+  const delayMs = options.delayMs ?? 0;
+  const handler: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, path)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'POST') return methodNotAllowed(route, 'POST', 'login');
+    await wait(delayMs);
+    const headers =
+      status === 429 && failure.retryAfterSeconds !== undefined
+        ? { 'retry-after': String(failure.retryAfterSeconds) }
+        : {};
+    await fulfillJson(
+      route,
+      status,
+      {
+        error: {
+          code: failure.code ?? 'INVALID_CREDENTIALS',
+          message: failure.message ?? 'The supplied credentials are not valid.',
+        },
+      },
+      headers,
+    );
+  };
+
+  const routes: readonly RegisteredRoute[] = [{ url: `**${path}`, handler }];
+  await registerRoutes(page, routes);
+  return createController(page, records, routes);
+}
+
+export async function mockUnauthenticatedSession(
+  page: Page,
+  options: Pick<AuthMockOptions, 'sessionPath' | 'delayMs'> = {},
+): Promise<AuthenticationMockController> {
+  const path = normalizePath(options.sessionPath ?? PATHS.session);
+  const records: MockRequestRecord[] = [];
+  const delayMs = options.delayMs ?? 0;
+  const handler: RouteHandler = async (route) => {
+    const request = route.request();
+    if (!matchesPath(request, path)) return route.fallback();
+    capture(request, records);
+    if (await handlePreflight(route)) return;
+    if (request.method() !== 'GET') {
+      return methodNotAllowed(route, 'GET', 'session retrieval');
+    }
+    await wait(delayMs);
+    await fulfillJson(route, 401, {
+      error: {
+        code: 'SESSION_EXPIRED',
+        message: 'The authentication session has expired.',
+      },
+    });
+  };
+  const routes: readonly RegisteredRoute[] = [{ url: `**${path}`, handler }];
+  await registerRoutes(page, routes);
+  return createController(page, records, routes);
 }
